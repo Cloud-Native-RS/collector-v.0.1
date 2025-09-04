@@ -1,18 +1,20 @@
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card";
+import { cn, generateMeta } from "@/lib/utils";
+import { ChevronRightIcon, Download } from "lucide-react";
+
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, ChevronRightIcon, Download } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import CalendarDateRangePicker from "@/components/custom-date-range-picker";
+
+export async function generateMetadata() {
+  return generateMeta({
+    title: "Transaction",
+    description:
+      "Payment admin dashboard is a template used to track, manage and monitor payments and transactions. Built with shadcn/ui, Tailwind CSS, Next.js and React.",
+    canonical: "/payment/transactions"
+  });
+}
 
 const transactions = [
   {
