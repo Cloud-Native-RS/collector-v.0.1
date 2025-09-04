@@ -9,7 +9,7 @@ import CalendarDateRangePicker from "@/components/custom-date-range-picker";
 
 export async function generateMetadata() {
   return generateMeta({
-    title: "Transaction",
+    title: "Transactions",
     description:
       "Payment admin dashboard is a template used to track, manage and monitor payments and transactions. Built with shadcn/ui, Tailwind CSS, Next.js and React.",
     canonical: "/payment/transactions"
