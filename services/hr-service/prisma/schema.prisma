@@ -1,0 +1,194 @@
+// Prisma schema for HR & People Management Microservice
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl", "linux-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACTOR
+  INTERN
+  TEMPORARY
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  ON_LEAVE
+  REMOTE
+  SICK_LEAVE
+  VACATION
+}
+
+enum LeaveType {
+  VACATION
+  SICK
+  UNPAID
+  PERSONAL
+  MATERNITY
+  PATERNITY
+  OTHER
+}
+
+enum PayrollStatus {
+  PENDING
+  PROCESSED
+  PAID
+  CANCELLED
+}
+
+enum ApplicantStatus {
+  APPLIED
+  SCREENING
+  INTERVIEWING
+  OFFERED
+  HIRED
+  REJECTED
+  WITHDRAWN
+}
+
+enum JobPostingStatus {
+  OPEN
+  CLOSED
+  DRAFT
+  FILLED
+}
+
+// Employee entity
+model Employee {
+  id                String          @id @default(uuid())
+  firstName         String
+  lastName          String
+  email             String          @unique
+  phone             String?
+  jobTitle          String
+  department        String?
+  employmentType    EmploymentType  @default(FULL_TIME)
+  startDate         DateTime
+  endDate           DateTime?
+  salaryInfoId      String?         @unique
+  salaryInfo        Payroll?        @relation("EmployeeSalary", fields: [salaryInfoId], references: [id], onDelete: SetNull)
+  managerId         String?
+  manager           Employee?       @relation("EmployeeManager", fields: [managerId], references: [id], onDelete: SetNull)
+  directReports     Employee[]      @relation("EmployeeManager")
+  tenantId          String
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  
+  // Relations
+  attendanceRecords Attendance[]
+  payrollRecords    Payroll[]       @relation("EmployeePayroll")
+  
+  @@index([tenantId])
+  @@index([email])
+  @@index([managerId])
+  @@index([department])
+  @@map("employees")
+}
+
+// Attendance entity
+model Attendance {
+  id            String           @id @default(uuid())
+  employeeId    String
+  employee      Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  checkInTime   DateTime?
+  checkOutTime  DateTime?
+  date          DateTime         @db.Date
+  status        AttendanceStatus @default(PRESENT)
+  leaveType     LeaveType?
+  notes         String?
+  tenantId      String
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  
+  @@unique([employeeId, date, tenantId])
+  @@index([tenantId])
+  @@index([employeeId])
+  @@index([date])
+  @@index([status])
+  @@map("attendances")
+}
+
+// Payroll entity
+model Payroll {
+  id              String          @id @default(uuid())
+  employeeId      String
+  employee        Employee        @relation("EmployeePayroll", fields: [employeeId], references: [id], onDelete: Cascade)
+  employeeSalary  Employee?       @relation("EmployeeSalary")
+  salaryBase      Decimal         @db.Decimal(10, 2)
+  bonuses         Decimal         @default(0) @db.Decimal(10, 2)
+  deductions      Decimal         @default(0) @db.Decimal(10, 2)
+  taxes           Decimal         @default(0) @db.Decimal(10, 2)
+  netPay          Decimal         @db.Decimal(10, 2)
+  payPeriodStart  DateTime        @db.Date
+  payPeriodEnd    DateTime        @db.Date
+  status          PayrollStatus   @default(PENDING)
+  paymentDate     DateTime?       @db.Date
+  notes           String?
+  tenantId        String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  @@index([tenantId])
+  @@index([employeeId])
+  @@index([status])
+  @@index([payPeriodStart, payPeriodEnd])
+  @@map("payrolls")
+}
+
+// Job Posting entity
+model JobPosting {
+  id          String            @id @default(uuid())
+  title       String
+  description String            @db.Text
+  department  String?
+  location    String?
+  status      JobPostingStatus  @default(DRAFT)
+  postedDate  DateTime?
+  closedDate  DateTime?
+  tenantId    String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  
+  // Relations
+  applicants  Applicant[]
+  
+  @@index([tenantId])
+  @@index([status])
+  @@index([department])
+  @@map("job_postings")
+}
+
+// Applicant entity (Recruiting)
+model Applicant {
+  id            String          @id @default(uuid())
+  jobPostingId  String
+  jobPosting    JobPosting      @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
+  applicantName String
+  email         String
+  phone         String?
+  resumeUrl     String?
+  status        ApplicantStatus @default(APPLIED)
+  appliedDate   DateTime        @default(now())
+  interviewDate DateTime?
+  offerDate     DateTime?
+  hiredDate     DateTime?
+  rejectedDate  DateTime?
+  notes         String?         @db.Text
+  tenantId      String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  
+  @@index([tenantId])
+  @@index([jobPostingId])
+  @@index([status])
+  @@index([email])
+  @@map("applicants")
+}
+

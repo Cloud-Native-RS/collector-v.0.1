@@ -1,0 +1,43 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: registry-service-build
+  namespace: collector-platform
+  labels:
+    app: registry-service
+    component: build
+spec:
+  source:
+    type: Git
+    git:
+      uri: https://github.com/your-org/collector-platform.git
+      ref: main
+    contextDir: services/registry-service
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile
+  output:
+    to:
+      kind: ImageStreamTag
+      name: registry-service:latest
+  triggers:
+  - type: ConfigChange
+  - type: ImageChange
+  - type: GitHub
+    github:
+      secret: github-webhook-secret
+  runPolicy: Serial
+
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: registry-service
+  namespace: collector-platform
+  labels:
+    app: registry-service
+spec:
+  lookupPolicy:
+    local: false
+

@@ -17,7 +17,7 @@ export default function NotFound() {
         </p>
         <div className="mt-10 flex items-center justify-center gap-x-2">
           <Button size="lg" asChild>
-            <Link href="/dashboard">Go back home</Link>
+            <Link href="/collector/dashboard">Go back home</Link>
           </Button>
           <Button size="lg" variant="ghost">
             Contact support <ArrowRight className="ms-2 h-4 w-4" />
@@ -25,12 +25,14 @@ export default function NotFound() {
         </div>
       </div>
       <div className="hidden lg:block">
-        <img
-          src={`/404.svg`}
+        <Image
+          src="/404.svg"
           width={300}
           height={400}
           className="w-full object-contain lg:max-w-2xl"
           alt="not found image"
+          priority={false}
+          loading="lazy"
         />
       </div>
     </div>

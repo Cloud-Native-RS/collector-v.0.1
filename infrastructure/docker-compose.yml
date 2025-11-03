@@ -1,0 +1,253 @@
+version: '3.8'
+
+services:
+  # PostgreSQL - Shared Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: collector-postgres
+    environment:
+      POSTGRES_USER: collector_user
+      POSTGRES_PASSWORD: collector_pass
+      POSTGRES_DB: collector_db
+    ports:
+      - "55432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U collector_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - collector-network
+
+  # Redis - Cache Layer
+  redis:
+    image: redis:7-alpine
+    container_name: collector-redis
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD:-redis_password_change_in_production}
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+      --save 300 100
+      --save 900 1
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_password_change_in_production}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - collector-network
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password_change_in_production}
+
+  # NATS - Event Bus (Optional - can use RabbitMQ instead)
+  nats:
+    image: nats:2-alpine
+    container_name: collector-nats
+    ports:
+      - "4222:4222"
+      - "8222:8222"  # HTTP monitoring
+      - "6222:6222"  # Cluster routing
+    command:
+      - "-js"  # Enable JetStream
+      - "-m"   # Enable HTTP monitoring
+      - "8222"
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "4222"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - collector-network
+
+  # RabbitMQ - Message Broker
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: collector-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-rabbitmq_user}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-rabbitmq_pass_change_in_production}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-collector}
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: -rabbit log_levels [{connection,error},{default,info}]
+    ports:
+      - "5672:5672"   # AMQP port
+      - "15672:15672" # Management UI
+      - "25672:25672" # Cluster port
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      # Optional: Uncomment when ready to use custom config
+      # - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+      # - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - collector-network
+
+  # Kong Database (PostgreSQL for Kong config)
+  kong-database:
+    image: postgres:16-alpine
+    container_name: collector-kong-db
+    environment:
+      POSTGRES_USER: kong_user
+      POSTGRES_PASSWORD: kong_pass
+      POSTGRES_DB: kong_db
+    volumes:
+      - kong_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kong_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - collector-network
+
+  # Kong Migration
+  kong-migration:
+    image: kong:3.6
+    container_name: collector-kong-migration
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_USER: kong_user
+      KONG_PG_PASSWORD: kong_pass
+      KONG_PG_DATABASE: kong_db
+    command: kong migrations bootstrap
+    depends_on:
+      kong-database:
+        condition: service_healthy
+    networks:
+      - collector-network
+    restart: "no"
+
+  # Kong API Gateway
+  kong:
+    image: kong:3.6
+    container_name: collector-kong
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_USER: kong_user
+      KONG_PG_PASSWORD: kong_pass
+      KONG_PG_DATABASE: kong_db
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+      KONG_PLUGINS: jwt,oauth2,oidc,rate-limiting,correlation-id,request-transformer,response-transformer,cors
+    ports:
+      - "8000:8000"   # Proxy
+      - "8443:8443"   # Proxy SSL
+      - "8001:8001"   # Admin API
+      - "8444:8444"   # Admin API SSL
+    depends_on:
+      kong-database:
+        condition: service_healthy
+      kong-migration:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+    networks:
+      - collector-network
+
+  # HAProxy - Load Balancer
+  haproxy:
+    image: haproxy:2.9-alpine
+    container_name: collector-haproxy
+    volumes:
+      - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8404:8404"  # Stats
+      - "9999:9999"  # Health check
+    depends_on:
+      - kong
+    healthcheck:
+      test: ["CMD", "haproxy", "-c", "-f", "/usr/local/etc/haproxy/haproxy.cfg"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - collector-network
+
+# -----------------------------------
+# KONGA - Kong Management UI (DISABLED, SECURITY RISK)
+# -----------------------------------
+# Konga is disabled due to multiple known CVEs and privilege escalation risks (CVE-2023-26987, CVE-2021-42192).
+# Use only in isolated test environments, never in production.
+# For secure Kong management, use decK (https://github.com/kong/deck), the kong.yml file,
+# and GitOps/CI automation instead. See docs/infrastructure/ and Kong docs: https://docs.konghq.com/deck/latest/
+#
+#  konga:
+#    image: pantsel/konga:latest
+#    container_name: collector-konga
+#    environment:
+#      NODE_ENV: development
+#      TOKEN_SECRET: konga-token-secret-change-in-production
+#    ports:
+#      - "1337:1337"
+#    depends_on:
+#      - kong
+#      - kong-database
+#    networks:
+#      - collector-network
+
+  # Envoy Proxy - Alternative API Gateway (optional, can use instead of Kong)
+  envoy:
+    image: envoyproxy/envoy:v1.30-latest
+    container_name: collector-envoy
+    volumes:
+      - ./envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
+    ports:
+      - "9901:9901"  # Admin interface
+      - "10000:10000" # HTTP listener
+      - "8445:8443"   # HTTPS listener (8445 externally to avoid conflict with Kong)
+    command: /usr/local/bin/envoy -c /etc/envoy/envoy.yaml --service-cluster collector-gateway
+    depends_on:
+      - kong
+    networks:
+      - collector-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9901/server_info"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:
+  kong_db_data:
+  rabbitmq_data:
+
+networks:
+  collector-network:
+    driver: bridge
+
+# -------------------------------
+# Recommended Kong Gateway Management (Production):
+# -------------------------------
+# 1. Kong configuration should be kept in source-controlled files:
+#      - infrastructure/kong/kong.yml
+# 2. Use decK (https://github.com/kong/deck) for sync/diff between kong.yml and Kong.
+#      $ deck sync --state infrastructure/kong/kong.yml
+# 3. Optionally, use Kong's Terraform provider for managed environments.
+# 4. Never expose Kong Admin API ports (8001/8444) to public networks.
+# 5. Always review plugin and route changes through code review/CI.
+

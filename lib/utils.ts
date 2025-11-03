@@ -25,13 +25,6 @@ export function generateMeta({
   return {
     title: `${title} - Shadcn UI Kit`,
     description: description,
-    metadataBase: new URL(`https://shadcnuikit.com`),
-    alternates: {
-      canonical: `/dashboard${canonical}`
-    },
-    openGraph: {
-      images: [`/images/seo.jpg`]
-    }
   };
 }
 

@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: invoices-postgres
+    environment:
+      POSTGRES_USER: invoices_user
+      POSTGRES_PASSWORD: invoices_pass
+      POSTGRES_DB: invoices_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U invoices_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nats:
+    image: nats:2-alpine
+    container_name: invoices-nats
+    ports:
+      - "4222:4222"
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "4222"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  invoices-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: invoices-service
+    environment:
+      NODE_ENV: development
+      PORT: 3002
+      DATABASE_URL: postgresql://invoices_user:invoices_pass@postgres:5432/invoices_db?schema=public
+      JWT_SECRET: collector_dev_jwt_secret_change_in_production
+      NATS_URL: nats://nats:4222
+      REGISTRY_SERVICE_URL: http://registry-service:3001
+      CORS_ORIGIN: http://localhost:3000
+    ports:
+      - "3002:3002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    command: >
+      sh -c "npm run db:migrate:deploy && npm start"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data:
+

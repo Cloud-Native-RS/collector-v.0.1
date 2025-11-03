@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: offers-postgres
+    environment:
+      POSTGRES_USER: offers_user
+      POSTGRES_PASSWORD: offers_pass
+      POSTGRES_DB: offers_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U offers_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: offers-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  offers-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: offers-service
+    environment:
+      NODE_ENV: development
+      PORT: 3002
+      DATABASE_URL: postgresql://offers_user:offers_pass@postgres:5432/offers_db?schema=public
+      JWT_SECRET: collector_dev_jwt_secret_change_in_production
+      REDIS_URL: redis://redis:6379
+      CORS_ORIGIN: http://localhost:3000
+      CRM_API_URL: ${CRM_API_URL:-}
+      CRM_API_KEY: ${CRM_API_KEY:-}
+    ports:
+      - "3002:3002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "npm run db:migrate:deploy && npm start"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data:
+  redis_data:
+

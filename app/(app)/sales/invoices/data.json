@@ -1,0 +1,180 @@
+[
+  {
+    "id": "1",
+      "invoiceNumber": "INV-2024-00001",
+      "deliveryNoteId": "DN-2024-001",
+      "customerId": "customer-1",
+      "companyId": "company-1",
+      "status": "issued",
+      "issueDate": "2024-01-15T00:00:00.000Z",
+      "dueDate": "2024-02-14T00:00:00.000Z",
+      "subtotal": 1000.00,
+      "taxTotal": 200.00,
+      "discountTotal": 0.00,
+      "grandTotal": 1200.00,
+      "currency": "USD",
+      "paidAmount": 0.00,
+      "outstandingAmount": 1200.00,
+      "lineItems": [
+        {
+          "id": "item-1",
+          "productId": "prod-1",
+          "description": "Premium Subscription - Annual",
+          "quantity": 1,
+          "unitPrice": 1000.00,
+          "discountPercent": 0,
+          "taxPercent": 20.0,
+          "totalPrice": 1200.00
+        }
+      ],
+      "tenantId": "default-tenant",
+      "createdAt": "2024-01-15T00:00:00.000Z",
+      "updatedAt": "2024-01-15T00:00:00.000Z"
+    }
+  },
+  {
+    "id": "2",
+    "invoiceNumber": "INV-2024-00002",
+    "deliveryNoteId": "DN-2024-002",
+    "customerId": "customer-2",
+    "status": "paid",
+    "issueDate": "2024-01-10T00:00:00.000Z",
+    "dueDate": "2024-02-09T00:00:00.000Z",
+    "subtotal": 2500.00,
+    "taxTotal": 500.00,
+    "discountTotal": 100.00,
+    "grandTotal": 2900.00,
+    "currency": "EUR",
+    "paidAmount": 2900.00,
+    "outstandingAmount": 0.00,
+    "lineItems": [
+      {
+        "id": "item-2",
+        "productId": "prod-2",
+        "description": "Enterprise License",
+        "quantity": 5,
+        "unitPrice": 500.00,
+        "discountPercent": 4,
+        "taxPercent": 20.0,
+        "totalPrice": 2900.00
+      }
+    ],
+    "payments": [
+      {
+        "id": "pay-1",
+        "invoiceId": "2",
+        "provider": "STRIPE",
+        "amount": 2900.00,
+        "currency": "EUR",
+        "status": "succeeded",
+        "transactionId": "txn_abc123",
+        "paymentMethod": "card",
+        "processedAt": "2024-01-12T00:00:00.000Z"
+      }
+    ],
+    "tenantId": "default-tenant",
+    "createdAt": "2024-01-10T00:00:00.000Z",
+    "updatedAt": "2024-01-12T00:00:00.000Z"
+  },
+  {
+    "id": "3",
+    "invoiceNumber": "INV-2024-00003",
+    "customerId": "customer-3",
+    "status": "overdue",
+    "issueDate": "2023-12-01T00:00:00.000Z",
+    "dueDate": "2024-01-01T00:00:00.000Z",
+    "subtotal": 800.00,
+    "taxTotal": 160.00,
+    "discountTotal": 0.00,
+    "grandTotal": 960.00,
+    "currency": "GBP",
+    "paidAmount": 0.00,
+    "outstandingAmount": 960.00,
+    "lineItems": [
+      {
+        "id": "item-3",
+        "description": "Consulting Services",
+        "quantity": 8,
+        "unitPrice": 100.00,
+        "discountPercent": 0,
+        "taxPercent": 20.0,
+        "totalPrice": 960.00
+      }
+    ],
+    "tenantId": "default-tenant",
+    "createdAt": "2023-12-01T00:00:00.000Z",
+    "updatedAt": "2023-12-01T00:00:00.000Z"
+  },
+  {
+    "id": "4",
+    "invoiceNumber": "INV-2024-00004",
+    "deliveryNoteId": "DN-2024-004",
+    "customerId": "customer-1",
+    "status": "partially_paid",
+    "issueDate": "2024-01-20T00:00:00.000Z",
+    "dueDate": "2024-02-19T00:00:00.000Z",
+    "subtotal": 1500.00,
+    "taxTotal": 300.00,
+    "discountTotal": 50.00,
+    "grandTotal": 1750.00,
+    "currency": "USD",
+    "paidAmount": 875.00,
+    "outstandingAmount": 875.00,
+    "lineItems": [
+      {
+        "id": "item-4",
+        "productId": "prod-3",
+        "description": "Basic Subscription + Support",
+        "quantity": 3,
+        "unitPrice": 500.00,
+        "discountPercent": 3.33,
+        "taxPercent": 20.0,
+        "totalPrice": 1750.00
+      }
+    ],
+    "payments": [
+      {
+        "id": "pay-2",
+        "invoiceId": "4",
+        "provider": "BANK_TRANSFER",
+        "amount": 875.00,
+        "currency": "USD",
+        "status": "succeeded",
+        "processedAt": "2024-01-22T00:00:00.000Z"
+      }
+    ],
+    "tenantId": "default-tenant",
+    "createdAt": "2024-01-20T00:00:00.000Z",
+    "updatedAt": "2024-01-22T00:00:00.000Z"
+  },
+  {
+    "id": "5",
+    "invoiceNumber": "INV-2024-00005",
+    "customerId": "customer-4",
+    "status": "draft",
+    "issueDate": "2024-01-25T00:00:00.000Z",
+    "dueDate": "2024-02-24T00:00:00.000Z",
+    "subtotal": 600.00,
+    "taxTotal": 120.00,
+    "discountTotal": 0.00,
+    "grandTotal": 720.00,
+    "currency": "USD",
+    "paidAmount": 0.00,
+    "outstandingAmount": 720.00,
+    "lineItems": [
+      {
+        "id": "item-5",
+        "description": "Setup Fee",
+        "quantity": 1,
+        "unitPrice": 600.00,
+        "discountPercent": 0,
+        "taxPercent": 20.0,
+        "totalPrice": 720.00
+      }
+    ],
+    "tenantId": "default-tenant",
+    "createdAt": "2024-01-25T00:00:00.000Z",
+    "updatedAt": "2024-01-25T00:00:00.000Z"
+  }
+]
+

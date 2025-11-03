@@ -1,0 +1,20 @@
+{
+  "name": "@collector/event-bus",
+  "version": "1.0.0",
+  "description": "Shared event bus for Collector microservices",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.3"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.4",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3"
+  }
+}
+

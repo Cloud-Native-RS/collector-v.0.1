@@ -1,0 +1,228 @@
+{
+  "rabbit_version": "3.13",
+  "rabbitmq_version": "3.13.0",
+  "product_name": "RabbitMQ",
+  "product_version": "3.13.0",
+  "users": [
+    {
+      "name": "rabbitmq_user",
+      "password_hash": "rabbitmq_pass_change_in_production",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": "administrator",
+      "limits": {}
+    }
+  ],
+  "vhosts": [
+    {
+      "name": "collector"
+    }
+  ],
+  "permissions": [
+    {
+      "user": "rabbitmq_user",
+      "vhost": "collector",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
+  "topic_permissions": [],
+  "parameters": [],
+  "global_parameters": [
+    {
+      "name": "cluster_name",
+      "value": "collector-cluster"
+    }
+  ],
+  "policies": [
+    {
+      "vhost": "collector",
+      "name": "ha-policy",
+      "pattern": ".*",
+      "apply-to": "all",
+      "definition": {
+        "ha-mode": "exactly",
+        "ha-params": 2,
+        "ha-sync-mode": "automatic"
+      },
+      "priority": 0
+    },
+    {
+      "vhost": "collector",
+      "name": "req-delivery-policy",
+      "pattern": "^req\\.",
+      "apply-to": "queues",
+      "definition": {
+        "message-ttl": 300000,
+        "dead-letter-exchange": "req.dead-letter"
+      },
+      "priority": 1
+    }
+  ],
+  "queues": [
+    {
+      "name": "orders.created",
+      "vhost": "collector",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "orders.updated",
+      "vhost": "collector",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "invoices.created",
+      "vhost": "collector",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "invoices.paid",
+      "vhost": "collector",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "delivery.dispatched",
+      "vhost": "collector",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "delivery.delivered",
+      "vhost": "collector",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    },
+    {
+      "name": "inventory.stock-updated",
+      "vhost": "collector",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {}
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "collector.events",
+      "vhost": "collector",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "orders.exchange",
+      "vhost": "collector",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "invoices.exchange",
+      "vhost": "collector",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "delivery.exchange",
+      "vhost": "collector",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "inventory.exchange",
+      "vhost": "collector",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "req.dead-letter",
+      "vhost": "collector",
+      "type": "fanout",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "orders.exchange",
+      "vhost": "collector",
+      "destination": "orders.created",
+      "destination_type": "queue",
+      "routing_key": "orders.created",
+      "arguments": {}
+    },
+    {
+      "source": "orders.exchange",
+      "vhost": "collector",
+      "destination": "orders.updated",
+      "destination_type": "queue",
+      "routing_key": "orders.updated",
+      "arguments": {}
+    },
+    {
+      "source": "invoices.exchange",
+      "vhost": "collector",
+      "destination": "invoices.created",
+      "destination_type": "queue",
+      "routing_key": "invoices.created",
+      "arguments": {}
+    },
+    {
+      "source": "invoices.exchange",
+      "vhost": "collector",
+      "destination": "invoices.paid",
+      "destination_type": "queue",
+      "routing_key": "invoices.paid",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.exchange",
+      "vhost": "collector",
+      "destination": "delivery.dispatched",
+      "destination_type": "queue",
+      "routing_key": "delivery.dispatched",
+      "arguments": {}
+    },
+    {
+      "source": "delivery.exchange",
+      "vhost": "collector",
+      "destination": "delivery.delivered",
+      "destination_type": "queue",
+      "routing_key": "delivery.delivered",
+      "arguments": {}
+    },
+    {
+      "source": "inventory.exchange",
+      "vhost": "collector",
+      "destination": "inventory.stock-updated",
+      "destination_type": "queue",
+      "routing_key": "inventory.stock-updated",
+      "arguments": {}
+    }
+  ]
+}
+

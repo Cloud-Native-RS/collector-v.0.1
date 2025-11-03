@@ -1,0 +1,207 @@
+// Prisma schema for Project Management Microservice
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl", "linux-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum ProjectStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  ON_HOLD
+  CANCELLED
+}
+
+enum MilestoneStatus {
+  PENDING
+  ACHIEVED
+  DELAYED
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  BLOCKED
+  CANCELLED
+}
+
+enum ResourceType {
+  EMPLOYEE
+  EQUIPMENT
+}
+
+// Project entity
+model Project {
+  id          String        @id @default(uuid())
+  name        String
+  description String?
+  clientId    String?       // Link to CRM
+  status      ProjectStatus @default(PLANNED)
+  startDate   DateTime
+  endDate     DateTime?
+  tenantId    String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  // Relations
+  milestones  Milestone[]
+  tasks       Task[]
+  progress    ProjectProgress[]
+  
+  @@index([tenantId])
+  @@index([clientId])
+  @@index([status])
+  @@map("projects")
+}
+
+// Milestone entity
+model Milestone {
+  id          String          @id @default(uuid())
+  projectId   String
+  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  dueDate     DateTime
+  status      MilestoneStatus @default(PENDING)
+  achievedAt  DateTime?
+  tenantId    String
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  
+  // Relations
+  tasks       Task[]
+  
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([status])
+  @@map("milestones")
+}
+
+// Task entity
+model Task {
+  id             String      @id @default(uuid())
+  projectId      String
+  project        Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  milestoneId    String?
+  milestone      Milestone?  @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  name           String
+  description    String?
+  assignedTo     String?     // user_id
+  priority       TaskPriority @default(MEDIUM)
+  status         TaskStatus  @default(PENDING)
+  startDate      DateTime?
+  dueDate        DateTime?
+  completedAt    DateTime?
+  estimatedHours Float?
+  actualHours    Float?
+  tenantId       String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  
+  // Task dependencies
+  dependsOn      TaskDependency[] @relation("DependentTask")
+  dependencies   TaskDependency[] @relation("DependencyTask")
+  
+  // Relations
+  resources      TaskResource[]
+  
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([milestoneId])
+  @@index([assignedTo])
+  @@index([status])
+  @@index([priority])
+  @@map("tasks")
+}
+
+// Task Dependencies
+model TaskDependency {
+  id                String   @id @default(uuid())
+  dependentTaskId   String   // Task that depends on another
+  dependentTask     Task     @relation("DependentTask", fields: [dependentTaskId], references: [id], onDelete: Cascade)
+  dependencyTaskId  String   // Task that must be completed first
+  dependencyTask    Task     @relation("DependencyTask", fields: [dependencyTaskId], references: [id], onDelete: Cascade)
+  tenantId          String
+  createdAt         DateTime @default(now())
+  
+  @@unique([dependentTaskId, dependencyTaskId])
+  @@index([tenantId])
+  @@index([dependentTaskId])
+  @@index([dependencyTaskId])
+  @@map("task_dependencies")
+}
+
+// Resource entity
+model Resource {
+  id              String       @id @default(uuid())
+  type            ResourceType
+  name            String
+  userId          String?      // If type is EMPLOYEE
+  availabilitySchedule String? // JSON string with schedule
+  tenantId        String
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  
+  // Relations
+  taskResources   TaskResource[]
+  
+  @@index([tenantId])
+  @@index([type])
+  @@index([userId])
+  @@map("resources")
+}
+
+// Task-Resource many-to-many relationship
+model TaskResource {
+  id         String   @id @default(uuid())
+  taskId     String
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  resourceId String
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  allocatedHours Float
+  tenantId   String
+  createdAt  DateTime @default(now())
+  
+  @@unique([taskId, resourceId])
+  @@index([tenantId])
+  @@index([taskId])
+  @@index([resourceId])
+  @@map("task_resources")
+}
+
+// Project Progress Snapshot for analytics
+model ProjectProgress {
+  id             String   @id @default(uuid())
+  projectId      String
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  totalTasks     Int      @default(0)
+  completedTasks Int      @default(0)
+  inProgressTasks Int     @default(0)
+  blockedTasks   Int      @default(0)
+  progressPercentage Float @default(0)
+  totalEstimatedHours Float
+  totalActualHours    Float
+  tenantId       String
+  createdAt      DateTime @default(now())
+  
+  @@index([tenantId])
+  @@index([projectId])
+  @@index([createdAt])
+  @@map("project_progress")
+}
+

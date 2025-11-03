@@ -1,0 +1,195 @@
+// Prisma schema for Invoices & Billing Microservice
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl", "linux-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  PARTIALLY_PAID
+  OVERDUE
+  CANCELED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  PARTIAL
+}
+
+enum PaymentProvider {
+  STRIPE
+  PAYPAL
+  BANK_TRANSFER
+  MANUAL
+  CASH
+}
+
+enum DunningStatus {
+  PENDING
+  SENT
+  COMPLETED
+  CANCELLED
+}
+
+// Invoice entity
+model Invoice {
+  id                String      @id @default(uuid())
+  invoiceNumber     String      @unique
+  deliveryNoteId    String?     // Reference to delivery note from Delivery service
+  customerId        String      // Reference to customer from Registry service
+  companyId         String?     // Reference to company from Registry service
+  
+  status            InvoiceStatus @default(DRAFT)
+  
+  issueDate         DateTime    @default(now())
+  dueDate           DateTime
+  
+  // Financial fields
+  subtotal          Decimal     @db.Decimal(15, 2)
+  taxTotal          Decimal     @db.Decimal(15, 2)
+  discountTotal     Decimal     @default(0) @db.Decimal(15, 2)
+  grandTotal        Decimal     @db.Decimal(15, 2)
+  
+  currency          String      @default("USD")
+  
+  // Payment tracking
+  paidAmount        Decimal     @default(0) @db.Decimal(15, 2)
+  outstandingAmount Decimal     @db.Decimal(15, 2)
+  
+  // Additional fields
+  paymentReference  String?
+  notes             String?
+  
+  // Relations
+  lineItems         InvoiceLineItem[]
+  payments          Payment[]
+  dunnings          Dunning[]
+  
+  tenantId          String
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  @@index([tenantId])
+  @@index([invoiceNumber])
+  @@index([customerId])
+  @@index([deliveryNoteId])
+  @@index([status])
+  @@index([dueDate])
+  @@map("invoices")
+}
+
+// Invoice Line Item entity
+model InvoiceLineItem {
+  id              String    @id @default(uuid())
+  invoiceId       String
+  productId       String?   // Reference to product
+  description     String
+  
+  quantity        Decimal   @db.Decimal(10, 2)
+  unitPrice       Decimal   @db.Decimal(15, 2)
+  
+  discountPercent Decimal   @default(0) @db.Decimal(5, 2)
+  taxPercent      Decimal   @db.Decimal(5, 2)
+  
+  totalPrice      Decimal   @db.Decimal(15, 2) // Computed: quantity * unitPrice * (1 - discount) * (1 + tax)
+  
+  invoice         Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  
+  tenantId        String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([tenantId])
+  @@index([invoiceId])
+  @@index([productId])
+  @@map("invoice_line_items")
+}
+
+// Payment entity
+model Payment {
+  id              String          @id @default(uuid())
+  invoiceId       String
+  provider        PaymentProvider
+  
+  amount          Decimal         @db.Decimal(15, 2)
+  currency        String          @default("USD")
+  
+  status          PaymentStatus   @default(PENDING)
+  
+  transactionId   String?         // Provider transaction ID
+  paymentMethod   String?
+  
+  processedAt     DateTime?
+  notes           String?
+  
+  invoice         Invoice         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  
+  tenantId        String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  @@index([tenantId])
+  @@index([invoiceId])
+  @@index([transactionId])
+  @@index([status])
+  @@map("payments")
+}
+
+// Dunning entity (overdue reminders)
+model Dunning {
+  id              String        @id @default(uuid())
+  invoiceId       String
+  
+  reminderLevel   Int           // 1, 2, 3...
+  dueDate         DateTime
+  sentAt          DateTime?
+  
+  status          DunningStatus @default(PENDING)
+  
+  templateUsed    String?
+  emailSent       String?       // To which email
+  
+  notes           String?
+  
+  invoice         Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  
+  tenantId        String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@index([tenantId])
+  @@index([invoiceId])
+  @@index([status])
+  @@map("dunnings")
+}
+
+// Tax Configuration per tenant
+model TaxConfiguration {
+  id            String   @id @default(uuid())
+  tenantId      String   @unique
+  
+  // Default tax rates
+  defaultTax    Decimal  @db.Decimal(5, 2)
+  
+  // Tax rules (JSON)
+  taxRules      String?  // JSON: { "US": 0.08, "EU": 0.20, ... }
+  
+  // Rounding rules
+  roundingMode  String   @default("HALF_UP") // HALF_UP, HALF_DOWN, CEIL, FLOOR
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("tax_configurations")
+}

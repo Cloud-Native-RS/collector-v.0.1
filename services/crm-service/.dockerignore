@@ -1,0 +1,13 @@
+node_modules
+npm-debug.log
+dist
+.env
+.env.local
+.git
+.gitignore
+*.md
+.vscode
+.idea
+*.test.ts
+*.spec.ts
+

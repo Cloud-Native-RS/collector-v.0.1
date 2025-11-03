@@ -1,0 +1,38 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { payrollApi, Payroll } from "@/lib/api/hr";
+import { toast } from "sonner";
+import PayrollTable from "./payroll-table";
+
+export default function PayrollPage() {
+  const [payrolls, setPayrolls] = useState<Payroll[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadPayrolls();
+  }, []);
+
+  const loadPayrolls = async () => {
+    try {
+      setLoading(true);
+      const response = await payrollApi.list({ limit: 100 });
+      setPayrolls(response.data || []);
+    } catch (error: any) {
+      toast.error(`Failed to load payroll: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-row items-center justify-between">
+        <h1 className="text-xl font-bold tracking-tight lg:text-2xl">Payroll</h1>
+      </div>
+      <PayrollTable data={payrolls} loading={loading} />
+    </div>
+  );
+}
+

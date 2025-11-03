@@ -5,6 +5,8 @@
 /.pnp
 .pnp.js
 .yarn/install-state.gz
+**/node_modules/
+!**/node_modules/.bin/
 
 # testing
 /coverage
@@ -15,10 +17,13 @@
 
 # production
 /build
+**/dist/
+**/*.tsbuildinfo
 
 # misc
 .DS_Store
 *.pem
+Thumbs.db
 
 # debug
 npm-debug.log*
@@ -27,15 +32,21 @@ yarn-error.log*
 
 # local env files
 .env*.local
+.env.production
 
 # vercel
 .vercel
 
 # editor
 .idea
+.vscode/
+*.swp
+*.swo
+*~
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
 
-.vercel
+# Duplicates and templates
+shadcn-dashboard-template/

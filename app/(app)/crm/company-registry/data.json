@@ -1,0 +1,237 @@
+[
+  {
+    "id": 1,
+    "companyNumber": "01",
+    "legalName": "Doe Industries Inc.",
+    "tradingName": "Doe Industries",
+    "companyType": "Corporation",
+    "taxId": "TAX-12-3456789",
+    "registrationNumber": "REG-2020-001",
+    "status": "active",
+    "industry": "Manufacturing",
+    "address": {
+      "street": "123 Main Street",
+      "city": "New York",
+      "state": "NY",
+      "zipCode": "10001",
+      "country": "United States"
+    },
+    "contactInfo": {
+      "email": "contact@doeindustries.com",
+      "phone": "+1 234 567 890",
+      "website": "https://www.doeindustries.com"
+    },
+    "bankAccount": {
+      "bankName": "Chase Bank",
+      "accountNumber": "****1234",
+      "routingNumber": "021000021",
+      "iban": null,
+      "swift": "CHASUS33"
+    },
+    "legalRepresentative": {
+      "name": "John Doe",
+      "title": "CEO",
+      "email": "john.doe@doeindustries.com",
+      "phone": "+1 234 567 891"
+    },
+    "tenantId": "tenant-001",
+    "createdAt": "2020-01-15T10:00:00Z",
+    "updatedAt": "2024-12-15T10:00:00Z"
+  },
+  {
+    "id": 2,
+    "companyNumber": "02",
+    "legalName": "TechCorp Solutions LLC",
+    "tradingName": "TechCorp",
+    "companyType": "Limited Liability Company",
+    "taxId": "TAX-98-7654321",
+    "registrationNumber": "REG-2021-045",
+    "status": "active",
+    "industry": "Technology",
+    "address": {
+      "street": "456 Silicon Valley Blvd",
+      "city": "San Francisco",
+      "state": "CA",
+      "zipCode": "94105",
+      "country": "United States"
+    },
+    "contactInfo": {
+      "email": "info@techcorp.com",
+      "phone": "+1 555 123 456",
+      "website": "https://www.techcorp.com"
+    },
+    "bankAccount": {
+      "bankName": "Wells Fargo",
+      "accountNumber": "****5678",
+      "routingNumber": "121000248",
+      "iban": null,
+      "swift": "WFBIUS6S"
+    },
+    "legalRepresentative": {
+      "name": "Jane Smith",
+      "title": "CTO",
+      "email": "jane.smith@techcorp.com",
+      "phone": "+1 555 123 457"
+    },
+    "tenantId": "tenant-001",
+    "createdAt": "2021-02-20T14:30:00Z",
+    "updatedAt": "2024-12-14T09:15:00Z"
+  },
+  {
+    "id": 3,
+    "companyNumber": "03",
+    "legalName": "Global Trading Ltd",
+    "tradingName": "GlobalTrade",
+    "companyType": "Private Limited Company",
+    "taxId": "GB123456789",
+    "registrationNumber": "GB-2022-078",
+    "status": "active",
+    "industry": "Trade & Logistics",
+    "address": {
+      "street": "789 London Road",
+      "city": "London",
+      "state": null,
+      "zipCode": "SW1A 1AA",
+      "country": "United Kingdom"
+    },
+    "contactInfo": {
+      "email": "contact@globaltrade.co.uk",
+      "phone": "+44 20 7946 0958",
+      "website": "https://www.globaltrade.co.uk"
+    },
+    "bankAccount": {
+      "bankName": "Barclays Bank",
+      "accountNumber": "****9012",
+      "routingNumber": null,
+      "iban": "GB82WEST12345698765432",
+      "swift": "BARCGB22"
+    },
+    "legalRepresentative": {
+      "name": "Michael Johnson",
+      "title": "Managing Director",
+      "email": "m.johnson@globaltrade.co.uk",
+      "phone": "+44 20 7946 0959"
+    },
+    "tenantId": "tenant-002",
+    "createdAt": "2022-03-10T11:00:00Z",
+    "updatedAt": "2024-12-13T16:45:00Z"
+  },
+  {
+    "id": 4,
+    "companyNumber": "04",
+    "legalName": "Innovate GmbH",
+    "tradingName": "Innovate",
+    "companyType": "Gesellschaft mit beschränkter Haftung",
+    "taxId": "DE123456789",
+    "registrationNumber": "HRB-123456",
+    "status": "active",
+    "industry": "Software Development",
+    "address": {
+      "street": "Berliner Straße 100",
+      "city": "Berlin",
+      "state": "Berlin",
+      "zipCode": "10115",
+      "country": "Germany"
+    },
+    "contactInfo": {
+      "email": "info@innovate.de",
+      "phone": "+49 30 12345678",
+      "website": "https://www.innovate.de"
+    },
+    "bankAccount": {
+      "bankName": "Deutsche Bank",
+      "accountNumber": "****3456",
+      "routingNumber": null,
+      "iban": "DE89370400440532013000",
+      "swift": "DEUTDEFF"
+    },
+    "legalRepresentative": {
+      "name": "Sarah Williams",
+      "title": "Geschäftsführerin",
+      "email": "s.williams@innovate.de",
+      "phone": "+49 30 12345679"
+    },
+    "tenantId": "tenant-001",
+    "createdAt": "2022-04-05T09:00:00Z",
+    "updatedAt": "2024-12-12T12:30:00Z"
+  },
+  {
+    "id": 5,
+    "companyNumber": "05",
+    "legalName": "Green Energy Co Ltd",
+    "tradingName": "GreenEnergy",
+    "companyType": "Private Limited Company",
+    "taxId": "GB987654321",
+    "registrationNumber": "GB-2023-123",
+    "status": "inactive",
+    "industry": "Renewable Energy",
+    "address": {
+      "street": "321 Energy Way",
+      "city": "Edinburgh",
+      "state": "Scotland",
+      "zipCode": "EH1 1YZ",
+      "country": "United Kingdom"
+    },
+    "contactInfo": {
+      "email": "contact@greenenergy.co.uk",
+      "phone": "+44 131 496 0000",
+      "website": "https://www.greenenergy.co.uk"
+    },
+    "bankAccount": {
+      "bankName": "Royal Bank of Scotland",
+      "accountNumber": "****7890",
+      "routingNumber": null,
+      "iban": "GB29NWBK60161331926819",
+      "swift": "NWBKGB2L"
+    },
+    "legalRepresentative": {
+      "name": "David Brown",
+      "title": "Director",
+      "email": "d.brown@greenenergy.co.uk",
+      "phone": "+44 131 496 0001"
+    },
+    "tenantId": "tenant-002",
+    "createdAt": "2023-05-18T13:20:00Z",
+    "updatedAt": "2024-11-25T10:00:00Z"
+  },
+  {
+    "id": 6,
+    "companyNumber": "06",
+    "legalName": "Global Tech Inc",
+    "tradingName": "Company 6",
+    "companyType": "Corporation",
+    "taxId": "TAX-234-5678901",
+    "registrationNumber": "REG-2024-006",
+    "status": "active",
+    "industry": "Tech",
+    "address": {
+      "street": "111 Business Ave",
+      "city": "NYC",
+      "state": "NY",
+      "zipCode": "10101",
+      "country": "United States"
+    },
+    "contactInfo": {
+      "email": "info@company6.com",
+      "phone": "+1 212 555 0100",
+      "website": "https://www.company6.com"
+    },
+    "bankAccount": {
+      "bankName": "Chase",
+      "accountNumber": "****1234",
+      "routingNumber": "021000021",
+      "iban": null,
+      "swift": "CHASUS33"
+    },
+    "legalRepresentative": {
+      "name": "CEO 6",
+      "title": "CEO",
+      "email": "ceo6@company6.com",
+      "phone": "+1 212 555 0101"
+    },
+    "tenantId": "tenant-001",
+    "createdAt": "2024-01-15T10:00:00Z",
+    "updatedAt": "2024-12-15T10:00:00Z"
+  }
+]
+

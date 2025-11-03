@@ -1,5 +1,4 @@
-import React from "react";
-import { cookies } from "next/headers";
+import type React from "react";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "next-themes";
 import GoogleAnalyticsInit from "@/lib/ga";
@@ -17,14 +16,8 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const cookieStore = await cookies();
-  const themeSettings = {
-    preset: (cookieStore.get("theme_preset")?.value ?? DEFAULT_THEME.preset) as any,
-    scale: (cookieStore.get("theme_scale")?.value ?? DEFAULT_THEME.scale) as any,
-    radius: (cookieStore.get("theme_radius")?.value ?? DEFAULT_THEME.radius) as any,
-    contentLayout: (cookieStore.get("theme_content_layout")?.value ??
-      DEFAULT_THEME.contentLayout) as any
-  };
+  // Simplified - just use default theme for now
+  const themeSettings = DEFAULT_THEME;
 
   const bodyAttributes = Object.fromEntries(
     Object.entries(themeSettings)

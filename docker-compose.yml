@@ -1,0 +1,583 @@
+name: collector-platform
+
+services:
+  # ===========================================
+  # INFRASTRUCTURE SERVICES
+  # ===========================================
+
+  # PostgreSQL 17 - Main Database
+  postgres:
+    image: postgres:17.2-alpine
+    container_name: collector-postgres
+    labels:
+      - "app=collector"
+      - "service=postgres"
+      - "version=17"
+    environment:
+      POSTGRES_USER: collector
+      POSTGRES_PASSWORD: collector_dev_pass
+      POSTGRES_DB: collector_db
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - collector_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U collector"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - collector-network
+    restart: unless-stopped
+
+  # Redis 7.4 - Cache Layer
+  redis:
+    image: redis:7.4.1-alpine
+    container_name: collector-redis
+    labels:
+      - "app=collector"
+      - "service=redis"
+      - "version=7.4"
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass collector_redis_pass
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - collector_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "collector_redis_pass", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - collector-network
+    restart: unless-stopped
+
+  # RabbitMQ 3.13 - Message Broker
+  rabbitmq:
+    image: rabbitmq:3.13.4-management-alpine
+    container_name: collector-rabbitmq
+    labels:
+      - "app=collector"
+      - "service=rabbitmq"
+      - "version=3.13"
+    environment:
+      RABBITMQ_DEFAULT_USER: collector
+      RABBITMQ_DEFAULT_PASS: collector_rabbitmq_pass
+      RABBITMQ_DEFAULT_VHOST: collector
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
+    volumes:
+      - collector_rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - collector-network
+    restart: unless-stopped
+
+  # ===========================================
+  # COLLECTOR MICROSERVICES
+  # ===========================================
+
+  # Database Initialization
+  db-init:
+    image: postgres:17.2-alpine
+    container_name: collector-db-init
+    labels:
+      - "app=collector"
+      - "service=db-init"
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGUSER: collector
+      PGPASSWORD: collector_dev_pass
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo '📦 Initializing Collector databases...' &&
+        export PGPASSWORD=collector_dev_pass &&
+        for db in collector_account_registry_db collector_orders_db collector_invoices_db collector_offers_db collector_inventory_db collector_delivery_db collector_hr_db collector_projects_db collector_crm_db; do
+          echo \"  Creating \$$db...\" &&
+          if psql -h postgres -U collector -d postgres -tc \"SELECT 1 FROM pg_database WHERE datname = '\$$db'\" | grep -q 1; then
+            echo \"    ✅ \$$db already exists\"
+          else
+            psql -h postgres -U collector -d postgres -c \"CREATE DATABASE \$$db\" &&
+            psql -h postgres -U collector -d \$$db -c \"GRANT ALL ON SCHEMA public TO collector\" &&
+            psql -h postgres -U collector -d \$$db -c \"ALTER SCHEMA public OWNER TO collector\" &&
+            echo \"    ✅ \$$db created\"
+          fi
+        done &&
+        echo '✅ All databases initialized!'
+      "
+    networks:
+      - collector-network
+    restart: "no"
+
+  # Account Registry Service - Customer & Company Management
+  collector-account-registry:
+    build:
+      context: ./services/registry-service
+      dockerfile: Dockerfile
+    container_name: collector-account-registry
+    labels:
+      - "app=collector"
+      - "service=account-registry"
+      - "version=1.0.0"
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DATABASE_URL: postgresql://collector:collector_dev_pass@postgres:5432/collector_account_registry_db?schema=public
+      JWT_SECRET: collector_dev_jwt_secret_change_in_production
+      REDIS_URL: redis://:collector_redis_pass@redis:6379
+      CORS_ORIGIN: http://localhost:3000
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+    command: >
+      sh -c "
+        echo '⏳ Waiting for database...' &&
+        sleep 5 &&
+        echo '📦 Running migrations...' &&
+        npm run db:migrate:deploy &&
+        echo '📦 Regenerating Prisma Client...' &&
+        npx prisma generate &&
+        echo '🚀 Starting Account Registry service...' &&
+        npm start
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - collector-network
+    restart: unless-stopped
+
+  # Orders Service
+  collector-orders:
+    build:
+      context: ./services/orders-service
+      dockerfile: Dockerfile
+    container_name: collector-orders
+    labels:
+      - "app=collector"
+      - "service=orders"
+      - "version=1.0.0"
+    environment:
+      NODE_ENV: development
+      PORT: 3002
+      DATABASE_URL: postgresql://collector:collector_dev_pass@postgres:5432/collector_orders_db?schema=public
+      JWT_SECRET: collector_dev_jwt_secret_change_in_production
+      REDIS_URL: redis://:collector_redis_pass@redis:6379
+      RABBITMQ_URL: amqp://collector:collector_rabbitmq_pass@rabbitmq:5672/collector
+      CORS_ORIGIN: http://localhost:3000
+      REGISTRY_SERVICE_URL: http://collector-account-registry:3001
+      ACCOUNT_REGISTRY_SERVICE_URL: http://collector-account-registry:3001
+      INVENTORY_SERVICE_URL: http://collector-inventory:3005
+      INVOICES_SERVICE_URL: http://collector-invoices:3003
+    ports:
+      - "3002:3002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+      collector-account-registry:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo '⏳ Waiting for database...' &&
+        sleep 5 &&
+        echo '📦 Running migrations...' &&
+        npm run db:migrate:deploy || true &&
+        echo '🚀 Starting orders service...' &&
+        npm start
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3002/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - collector-network
+    restart: unless-stopped
+
+  # Invoices Service
+  collector-invoices:
+    build:
+      context: ./services/invoices-service
+      dockerfile: Dockerfile
+    container_name: collector-invoices
+    labels:
+      - "app=collector"
+      - "service=invoices"
+      - "version=1.0.0"
+    environment:
+      NODE_ENV: development
+      PORT: 3003
+      DATABASE_URL: postgresql://collector:collector_dev_pass@postgres:5432/collector_invoices_db?schema=public
+      JWT_SECRET: collector_dev_jwt_secret_change_in_production
+      REDIS_URL: redis://:collector_redis_pass@redis:6379
+      CORS_ORIGIN: http://localhost:3000
+      REGISTRY_SERVICE_URL: http://collector-account-registry:3001
+      ACCOUNT_REGISTRY_SERVICE_URL: http://collector-account-registry:3001
+      ORDERS_SERVICE_URL: http://collector-orders:3002
+    ports:
+      - "3003:3003"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+      collector-account-registry:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo '⏳ Waiting for dependencies...' &&
+        sleep 5 &&
+        echo '📦 Running migrations...' &&
+        npm run db:migrate:deploy || true &&
+        echo '🚀 Starting invoices service...' &&
+        npm start
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3003/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - collector-network
+    restart: unless-stopped
+
+  # Offers Service
+  collector-offers:
+    build:
+      context: ./services/offers-service
+      dockerfile: Dockerfile
+    container_name: collector-offers
+    labels:
+      - "app=collector"
+      - "service=offers"
+      - "version=1.0.0"
+    environment:
+      NODE_ENV: development
+      PORT: 3004
+      DATABASE_URL: postgresql://collector:collector_dev_pass@postgres:5432/collector_offers_db?schema=public
+      JWT_SECRET: collector_dev_jwt_secret_change_in_production
+      REDIS_URL: redis://:collector_redis_pass@redis:6379
+      RABBITMQ_URL: amqp://collector:collector_rabbitmq_pass@rabbitmq:5672/collector
+      CORS_ORIGIN: http://localhost:3000
+      REGISTRY_SERVICE_URL: http://collector-account-registry:3001
+      ACCOUNT_REGISTRY_SERVICE_URL: http://collector-account-registry:3001
+    ports:
+      - "3004:3004"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+      collector-account-registry:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo '⏳ Waiting for dependencies...' &&
+        sleep 5 &&
+        echo '📦 Running migrations...' &&
+        npm run db:migrate:deploy || true &&
+        echo '🚀 Starting offers service...' &&
+        npm start
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3004/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - collector-network
+    restart: unless-stopped
+
+  # Inventory Service
+  collector-inventory:
+    build:
+      context: ./services/inventory-service
+      dockerfile: Dockerfile
+    container_name: collector-inventory
+    labels:
+      - "app=collector"
+      - "service=inventory"
+      - "version=1.0.0"
+    environment:
+      NODE_ENV: development
+      PORT: 3005
+      DATABASE_URL: postgresql://collector:collector_dev_pass@postgres:5432/collector_inventory_db?schema=public
+      JWT_SECRET: collector_dev_jwt_secret_change_in_production
+      REDIS_URL: redis://:collector_redis_pass@redis:6379
+      CORS_ORIGIN: http://localhost:3000
+      REGISTRY_SERVICE_URL: http://collector-account-registry:3001
+      ACCOUNT_REGISTRY_SERVICE_URL: http://collector-account-registry:3001
+    ports:
+      - "3005:3005"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+      collector-account-registry:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo '⏳ Waiting for dependencies...' &&
+        sleep 5 &&
+        echo '📦 Running migrations...' &&
+        npm run db:migrate:deploy || true &&
+        echo '🚀 Starting inventory service...' &&
+        npm start
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3005/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - collector-network
+    restart: unless-stopped
+
+  # Delivery Service
+  collector-delivery:
+    build:
+      context: ./services/delivery-service
+      dockerfile: Dockerfile
+    container_name: collector-delivery
+    labels:
+      - "app=collector"
+      - "service=delivery"
+      - "version=1.0.0"
+    environment:
+      NODE_ENV: development
+      PORT: 3008
+      DATABASE_URL: postgresql://collector:collector_dev_pass@postgres:5432/collector_delivery_db?schema=public
+      JWT_SECRET: collector_dev_jwt_secret_change_in_production
+      RABBITMQ_URL: amqp://collector:collector_rabbitmq_pass@rabbitmq:5672/collector
+      CORS_ORIGIN: http://localhost:3000
+      INVENTORY_SERVICE_URL: http://collector-inventory:3005
+      ORDERS_SERVICE_URL: http://collector-orders:3002
+    ports:
+      - "3008:3008"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+      collector-inventory:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo '⏳ Waiting for dependencies...' &&
+        sleep 5 &&
+        echo '📦 Running migrations...' &&
+        npm run db:migrate:deploy || true &&
+        echo '🚀 Starting delivery service...' &&
+        npm start
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3008/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - collector-network
+    restart: unless-stopped
+
+  # HR Service
+  collector-hr:
+    build:
+      context: ./services/hr-service
+      dockerfile: Dockerfile
+    container_name: collector-hr
+    labels:
+      - "app=collector"
+      - "service=hr"
+      - "version=1.0.0"
+    environment:
+      NODE_ENV: development
+      PORT: 3006
+      DATABASE_URL: postgresql://collector:collector_dev_pass@postgres:5432/collector_hr_db?schema=public
+      JWT_SECRET: collector_dev_jwt_secret_change_in_production
+      CORS_ORIGIN: http://localhost:3000
+    ports:
+      - "3006:3006"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+    command: >
+      sh -c "
+        echo '⏳ Waiting for dependencies...' &&
+        sleep 5 &&
+        echo '📦 Running migrations...' &&
+        npm run db:migrate:deploy || true &&
+        echo '🚀 Starting HR service...' &&
+        npm start
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3006/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - collector-network
+    restart: unless-stopped
+
+  # Project Management Service
+  collector-projects:
+    build:
+      context: ./services/project-management-service
+      dockerfile: Dockerfile
+    container_name: collector-projects
+    labels:
+      - "app=collector"
+      - "service=projects"
+      - "version=1.0.0"
+    environment:
+      NODE_ENV: development
+      PORT: 3007
+      DATABASE_URL: postgresql://collector:collector_dev_pass@postgres:5432/collector_projects_db?schema=public
+      JWT_SECRET: collector_dev_jwt_secret_change_in_production
+      CORS_ORIGIN: http://localhost:3000
+    ports:
+      - "3007:3007"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+    command: >
+      sh -c "
+        echo '⏳ Waiting for dependencies...' &&
+        sleep 5 &&
+        echo '📦 Running migrations...' &&
+        npm run db:migrate:deploy || true &&
+        echo '🚀 Starting projects service...' &&
+        npm start
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3007/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - collector-network
+    restart: unless-stopped
+
+  # CRM Service - Lead, Task, Deal, Activity and Sales Pipeline Management
+  collector-crm:
+    build:
+      context: ./services/crm-service
+      dockerfile: Dockerfile
+    container_name: collector-crm
+    labels:
+      - "app=collector"
+      - "service=crm"
+      - "version=1.0.0"
+    environment:
+      NODE_ENV: development
+      PORT: 3009
+      DATABASE_URL: postgresql://collector:collector_dev_pass@postgres:5432/collector_crm_db?schema=public
+      JWT_SECRET: collector_dev_jwt_secret_change_in_production
+      REDIS_URL: redis://:collector_redis_pass@redis:6379
+      CORS_ORIGIN: http://localhost:3000
+      REGISTRY_SERVICE_URL: http://collector-account-registry:3001
+      ACCOUNT_REGISTRY_SERVICE_URL: http://collector-account-registry:3001
+    ports:
+      - "3009:3009"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+      collector-account-registry:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo '⏳ Waiting for dependencies...' &&
+        sleep 5 &&
+        echo '📦 Running migrations...' &&
+        npm run db:migrate:deploy || true &&
+        echo '🚀 Starting CRM service...' &&
+        npm start
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3009/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - collector-network
+    restart: unless-stopped
+
+volumes:
+  collector_postgres_data:
+    labels:
+      - "app=collector"
+      - "service=postgres"
+  collector_redis_data:
+    labels:
+      - "app=collector"
+      - "service=redis"
+  collector_rabbitmq_data:
+    labels:
+      - "app=collector"
+      - "service=rabbitmq"
+
+networks:
+  collector-network:
+    driver: bridge
+    labels:
+      - "app=collector"
+

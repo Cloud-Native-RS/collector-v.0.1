@@ -1,0 +1,134 @@
+// Prisma schema for Offers Microservice
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl", "linux-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Offer Status Enum
+enum OfferStatus {
+  DRAFT
+  SENT
+  APPROVED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+// Approval Status Enum
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Currency Enum (common currencies)
+enum Currency {
+  USD
+  EUR
+  GBP
+  JPY
+  CHF
+  CAD
+  AUD
+  CNY
+  RSD
+  OTHER
+}
+
+// Offer entity
+model Offer {
+  id                String      @id @default(uuid())
+  offerNumber       String      @unique
+  customerId        String
+  status            OfferStatus @default(DRAFT)
+  issueDate         DateTime    @default(now())
+  validUntil        DateTime
+  currency          Currency    @default(USD)
+  
+  // Financial totals
+  subtotal          Decimal     @default(0) @db.Decimal(19, 4)
+  discountTotal     Decimal     @default(0) @db.Decimal(19, 4)
+  taxTotal          Decimal     @default(0) @db.Decimal(19, 4)
+  grandTotal        Decimal     @default(0) @db.Decimal(19, 4)
+  
+  // Approval workflow
+  approvalToken     String?     @unique
+  notes             String?     @db.Text
+  
+  // Versioning support
+  parentOfferId     String?     // Reference to original offer if this is a revision
+  version           Int         @default(1)
+  
+  tenantId          String
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  // Relations
+  lineItems         OfferLineItem[]
+  approvals         Approval[]
+  parentOffer                   Offer?              @relation("OfferVersions", fields: [parentOfferId], references: [id])
+  revisions         Offer[]     @relation("OfferVersions")
+  
+  @@index([tenantId])
+  @@index([customerId])
+  @@index([status])
+  @@index([offerNumber])
+  @@index([validUntil])
+  @@index([approvalToken])
+  @@index([parentOfferId])
+  @@map("offers")
+}
+
+// Offer Line Item entity
+model OfferLineItem {
+  id                String   @id @default(uuid())
+  offerId           String
+  productId         String?  // Nullable for custom lines
+  description       String
+  quantity          Decimal  @db.Decimal(10, 2)
+  unitPrice         Decimal  @db.Decimal(19, 4)
+  discountPercent   Decimal  @default(0) @db.Decimal(5, 2) // 0-100
+  taxPercent        Decimal  @default(0) @db.Decimal(5, 2) // 0-100
+  totalPrice        Decimal  @db.Decimal(19, 4) // Computed: (quantity * unitPrice * (1 - discountPercent/100)) * (1 + taxPercent/100)
+  
+  lineNumber        Int      // Sequential line number within offer
+  tenantId          String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  // Relations
+  offer             Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId])
+  @@index([offerId])
+  @@index([productId])
+  @@map("offer_line_items")
+}
+
+// Approval entity
+model Approval {
+  id                String         @id @default(uuid())
+  offerId           String
+  approverEmail     String
+  status            ApprovalStatus @default(PENDING)
+  comments          String?        @db.Text
+  approvedAt        DateTime?
+  tenantId          String
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  
+  // Relations
+  offer             Offer          @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId])
+  @@index([offerId])
+  @@index([approverEmail])
+  @@index([status])
+  @@map("approvals")
+}
+

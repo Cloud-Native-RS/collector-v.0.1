@@ -1,0 +1,118 @@
+// Prisma schema for Delivery Notes & Logistics Microservice
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl", "linux-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum DeliveryStatus {
+  PENDING
+  DISPATCHED
+  IN_TRANSIT
+  DELIVERED
+  RETURNED
+  CANCELED
+}
+
+enum DeliveryEventType {
+  CREATED
+  DISPATCHED
+  IN_TRANSIT
+  DELIVERED
+  RETURNED
+  CANCELED
+}
+
+// Delivery Note entity
+model DeliveryNote {
+  id                    String          @id @default(uuid())
+  deliveryNumber        String          @unique
+  orderId               String          // Reference to fulfilled order
+  customerId            String
+  status                DeliveryStatus  @default(PENDING)
+  carrierId             String?
+  carrier               Carrier?        @relation(fields: [carrierId], references: [id], onDelete: SetNull)
+  trackingNumber        String?
+  shippedAt             DateTime?
+  deliveredAt           DateTime?
+  deliveryAddressId     String
+  proofOfDeliveryUrl    String?         // URL to signed PDF or signature image
+  tenantId              String
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  // Relations
+  items                 DeliveryItem[]
+  events                DeliveryEvent[]
+
+  @@index([tenantId])
+  @@index([orderId])
+  @@index([customerId])
+  @@index([status])
+  @@index([deliveryNumber])
+  @@index([trackingNumber])
+  @@map("delivery_notes")
+}
+
+// Delivery Item entity
+model DeliveryItem {
+  id            String        @id @default(uuid())
+  deliveryNoteId String
+  deliveryNote  DeliveryNote  @relation(fields: [deliveryNoteId], references: [id], onDelete: Cascade)
+  productId     String
+  description   String
+  quantity      Int
+  unit          String        @default("pcs")
+  tenantId      String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([tenantId])
+  @@index([deliveryNoteId])
+  @@index([productId])
+  @@map("delivery_items")
+}
+
+// Carrier entity
+model Carrier {
+  id                  String          @id @default(uuid())
+  name                String
+  apiEndpoint         String
+  trackingUrlTemplate String
+  active              Boolean         @default(true)
+  apiKey              String?         // Encrypted in production
+  apiSecret           String?         // Encrypted in production
+  tenantId            String
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  // Relations
+  deliveryNotes       DeliveryNote[]
+
+  @@index([tenantId])
+  @@index([name])
+  @@map("carriers")
+}
+
+// Delivery Event entity
+model DeliveryEvent {
+  id            String            @id @default(uuid())
+  deliveryNoteId String
+  deliveryNote  DeliveryNote      @relation(fields: [deliveryNoteId], references: [id], onDelete: Cascade)
+  eventType     DeliveryEventType
+  timestamp     DateTime          @default(now())
+  metadata      Json?             // Flexible JSON for carrier-specific data
+  tenantId      String
+  createdAt     DateTime          @default(now())
+
+  @@index([tenantId])
+  @@index([deliveryNoteId])
+  @@index([eventType])
+  @@index([timestamp])
+  @@map("delivery_events")
+}
+

@@ -32,6 +32,8 @@ export function ActiveThemeProvider({
   );
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    
     const body = document.body;
 
     setThemeCookie("theme_radius", theme.radius);

@@ -1,0 +1,276 @@
+import { PrismaClient, Invoice, InvoiceStatus, InvoiceLineItem } from '@prisma/client';
+import { AppError } from '../middleware/error-handler';
+import { generateInvoiceNumber } from '../utils/invoice-number-generator';
+import { calculateInvoiceTotals, calculateLineItemTotal } from '../utils/tax-calculator';
+import { emitInvoiceIssued, emitInvoiceOverdue } from '../utils/event-emitter';
+import axios from 'axios';
+
+interface DeliveryNote {
+  id: string;
+  customerId: string;
+  items: Array<{
+    productId?: string;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+  }>;
+  deliveryDate: string;
+}
+
+export class InvoiceService {
+  constructor(
+    private prisma: PrismaClient,
+    private deliveryServiceUrl?: string
+  ) {}
+
+  /**
+   * Generate invoice from delivery note
+   */
+  async generateFromDeliveryNote(
+    deliveryNoteId: string,
+    tenantId: string,
+    taxPercent: number = 0,
+    dueDays: number = 30
+  ): Promise<Invoice> {
+    // Fetch delivery note (in production, call Delivery Service API)
+    const deliveryNote = await this.fetchDeliveryNote(deliveryNoteId);
+
+    if (!deliveryNote) {
+      throw new AppError('Delivery note not found', 404);
+    }
+
+    // Generate invoice number
+    const invoiceNumber = await generateInvoiceNumber(tenantId);
+
+    // Calculate due date
+    const issueDate = new Date();
+    const dueDate = new Date(issueDate);
+    dueDate.setDate(dueDate.getDate() + dueDays);
+
+    // Create line items
+    const lineItemsData = deliveryNote.items.map((item) => {
+      const totalPrice = calculateLineItemTotal(
+        item.quantity,
+        item.unitPrice,
+        0, // discount
+        taxPercent
+      );
+
+      return {
+        productId: item.productId,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        discountPercent: 0,
+        taxPercent,
+        totalPrice,
+        tenantId,
+      };
+    });
+
+    // Calculate totals
+    const totals = calculateInvoiceTotals(lineItemsData);
+
+    // Create invoice
+    const invoice = await this.prisma.invoice.create({
+      data: {
+        invoiceNumber,
+        deliveryNoteId,
+        customerId: deliveryNote.customerId,
+        tenantId,
+        status: InvoiceStatus.ISSUED,
+        issueDate,
+        dueDate,
+        subtotal: totals.subtotal,
+        taxTotal: totals.taxAmount,
+        discountTotal: totals.discountAmount,
+        grandTotal: totals.grandTotal,
+        currency: 'USD',
+        lineItems: {
+          create: lineItemsData,
+        },
+      },
+      include: {
+        lineItems: true,
+      },
+    });
+
+    // Emit event
+    await emitInvoiceIssued(invoice.id, invoice.customerId, tenantId, {
+      invoiceNumber: invoice.invoiceNumber,
+      grandTotal: invoice.grandTotal,
+    });
+
+    return invoice;
+  }
+
+  /**
+   * Fetch delivery note from Delivery Service
+   */
+  private async fetchDeliveryNote(deliveryNoteId: string): Promise<DeliveryNote | null> {
+    if (!this.deliveryServiceUrl) {
+      // Mock data for development
+      return {
+        id: deliveryNoteId,
+        customerId: 'customer-123',
+        items: [
+          {
+            productId: 'prod-1',
+            description: 'Product A',
+            quantity: 10,
+            unitPrice: 100,
+          },
+        ],
+        deliveryDate: new Date().toISOString(),
+      };
+    }
+
+    try {
+      const response = await axios.get(`${this.deliveryServiceUrl}/api/delivery-notes/${deliveryNoteId}`);
+      return response.data.data;
+    } catch (error) {
+      console.error('Failed to fetch delivery note:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get invoice by ID
+   */
+  async getById(id: string, tenantId: string): Promise<Invoice | null> {
+    return this.prisma.invoice.findFirst({
+      where: {
+        id,
+        tenantId,
+      },
+      include: {
+        lineItems: true,
+        payments: true,
+        dunningRecords: true,
+      },
+    });
+  }
+
+  /**
+   * List invoices with filters
+   */
+  async list(
+    tenantId: string,
+    filters?: {
+      status?: InvoiceStatus;
+      customerId?: string;
+      startDate?: Date;
+      endDate?: Date;
+    },
+    skip: number = 0,
+    take: number = 50
+  ): Promise<Invoice[]> {
+    const where: any = { tenantId };
+
+    if (filters?.status) {
+      where.status = filters.status;
+    }
+
+    if (filters?.customerId) {
+      where.customerId = filters.customerId;
+    }
+
+    if (filters?.startDate || filters?.endDate) {
+      where.issueDate = {};
+      if (filters.startDate) {
+        where.issueDate.gte = filters.startDate;
+      }
+      if (filters.endDate) {
+        where.issueDate.lte = filters.endDate;
+      }
+    }
+
+    return this.prisma.invoice.findMany({
+      where,
+      skip,
+      take,
+      include: {
+        lineItems: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  /**
+   * Update invoice status
+   */
+  async updateStatus(id: string, tenantId: string, status: InvoiceStatus): Promise<Invoice> {
+    const invoice = await this.getById(id, tenantId);
+    if (!invoice) {
+      throw new AppError('Invoice not found', 404);
+    }
+
+    return this.prisma.invoice.update({
+      where: { id },
+      data: { status },
+    });
+  }
+
+  /**
+   * Check and mark overdue invoices
+   */
+  async checkOverdueInvoices(tenantId: string): Promise<void> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const overdueInvoices = await this.prisma.invoice.findMany({
+      where: {
+        tenantId,
+        status: {
+          in: [InvoiceStatus.ISSUED, InvoiceStatus.PARTIALLY_PAID],
+        },
+        dueDate: {
+          lt: today,
+        },
+      },
+    });
+
+    for (const invoice of overdueInvoices) {
+      await this.prisma.invoice.update({
+        where: { id: invoice.id },
+        data: { status: InvoiceStatus.OVERDUE },
+      });
+
+      await emitInvoiceOverdue(invoice.id, invoice.customerId, tenantId);
+    }
+  }
+
+  /**
+   * Calculate payment status based on payments
+   */
+  async calculatePaymentStatus(invoiceId: string): Promise<InvoiceStatus> {
+    const invoice = await this.prisma.invoice.findUnique({
+      where: { id: invoiceId },
+      include: {
+        payments: {
+          where: {
+            status: 'SUCCEEDED',
+          },
+        },
+      },
+    });
+
+    if (!invoice) {
+      throw new AppError('Invoice not found', 404);
+    }
+
+    const paidAmount = invoice.payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
+    const grandTotal = Number(invoice.grandTotal);
+
+    if (paidAmount >= grandTotal) {
+      return InvoiceStatus.PAID;
+    } else if (paidAmount > 0) {
+      return InvoiceStatus.PARTIALLY_PAID;
+    }
+
+    return invoice.status;
+  }
+}
+

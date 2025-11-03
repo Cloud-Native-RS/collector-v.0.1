@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: orders-postgres
+    environment:
+      POSTGRES_USER: orders_user
+      POSTGRES_PASSWORD: orders_pass
+      POSTGRES_DB: orders_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U orders_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: orders-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: orders-rabbitmq
+    ports:
+      - "5673:5672"
+      - "15673:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: orders_user
+      RABBITMQ_DEFAULT_PASS: orders_pass
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  orders-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: orders-service
+    environment:
+      NODE_ENV: development
+      PORT: 3002
+      DATABASE_URL: postgresql://orders_user:orders_pass@postgres:5432/orders_db?schema=public
+      JWT_SECRET: collector_dev_jwt_secret_change_in_production
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://orders_user:orders_pass@rabbitmq:5672
+      RABBITMQ_EXCHANGE: orders_exchange
+      CORS_ORIGIN: http://localhost:3000
+      OFFERS_SERVICE_URL: http://localhost:3003
+      INVENTORY_SERVICE_URL: http://localhost:3004
+      PAYMENT_GATEWAY_URL: https://api.stripe.com/v1
+      SHIPPING_SERVICE_URL: http://localhost:3005
+    ports:
+      - "3002:3002"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    command: >
+      sh -c "npm run db:migrate:deploy && npm start"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:
+

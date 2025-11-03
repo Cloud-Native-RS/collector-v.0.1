@@ -1,0 +1,218 @@
+// Prisma schema for CRM Microservice
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl", "linux-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Lead Status
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL_SENT
+  NEGOTIATION
+  WON
+  LOST
+}
+
+// Lead Source
+enum LeadSource {
+  WEBSITE
+  SOCIAL
+  EMAIL
+  CALL
+  REFERRAL
+  OTHER
+}
+
+// Task Type
+enum TaskType {
+  CALL
+  EMAIL
+  MEETING
+  NOTE
+  FOLLOW_UP
+}
+
+// Task Status
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+// Task Priority
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// Deal Stage (Sales Pipeline)
+enum DealStage {
+  LEAD
+  QUALIFIED
+  PROPOSAL
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+// Activity Type
+enum ActivityType {
+  CALL
+  EMAIL
+  MEETING
+  NOTE
+}
+
+// Lead entity
+model Lead {
+  id                     String      @id @default(uuid())
+  leadNumber             String      @unique
+  name                   String
+  email                  String
+  phone                  String?
+  company                String?
+  companyType            String?
+  tradingName            String?
+  companyWebsite         String?
+  companyIndustry        String?
+  companySize            String?
+  companyAddress         String?
+  companyTaxId           String?
+  companyRegistrationNumber String?
+  legalRepName           String?
+  legalRepTitle          String?
+  legalRepEmail          String?
+  legalRepPhone          String?
+  source                 LeadSource  @default(WEBSITE)
+  status                 LeadStatus  @default(NEW)
+  value                  Float?      @default(0)
+  assignedTo             String?     // User ID
+  notes                  String?     @db.Text
+  convertedToCustomerId  String?     // Reference to customer in Registry Service
+  convertedAt            DateTime?
+  tenantId               String
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+
+  // Relations
+  tasks                  Task[]
+  deals                  Deal[]
+  activities             Activity[]
+
+  @@index([tenantId])
+  @@index([email])
+  @@index([status])
+  @@index([source])
+  @@index([assignedTo])
+  @@index([leadNumber])
+  @@map("leads")
+}
+
+// Task entity
+model Task {
+  id            String        @id @default(uuid())
+  title         String
+  description   String?       @db.Text
+  type          TaskType
+  status        TaskStatus    @default(PENDING)
+  priority      TaskPriority  @default(MEDIUM)
+  dueDate       DateTime?
+  completedAt   DateTime?
+  assignedTo    String?       // User ID
+  leadId        String?
+  dealId        String?
+  tenantId      String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  lead          Lead?         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal          Deal?         @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  activities    Activity[]
+
+  @@index([tenantId])
+  @@index([leadId])
+  @@index([dealId])
+  @@index([assignedTo])
+  @@index([status])
+  @@index([dueDate])
+  @@map("tasks")
+}
+
+// Deal/Opportunity entity
+model Deal {
+  id                String     @id @default(uuid())
+  dealNumber        String     @unique
+  title             String
+  description       String?    @db.Text
+  value             Float      @default(0)
+  probability       Int        @default(0) // 0-100 percentage
+  stage             DealStage  @default(LEAD)
+  expectedCloseDate DateTime?
+  actualCloseDate   DateTime?
+  wonAt             DateTime?
+  lostAt            DateTime?
+  lostReason        String?    @db.Text
+  customerId        String?    // Reference to customer in Registry Service
+  leadId            String?    // Reference to lead
+  assignedTo        String?    // User ID
+  tenantId          String
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  // Relations
+  lead              Lead?      @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  tasks             Task[]
+  activities        Activity[]
+
+  @@index([tenantId])
+  @@index([leadId])
+  @@index([customerId])
+  @@index([assignedTo])
+  @@index([stage])
+  @@index([dealNumber])
+  @@index([expectedCloseDate])
+  @@map("deals")
+}
+
+// Activity/Interaction entity
+model Activity {
+  id          String       @id @default(uuid())
+  type        ActivityType
+  title       String
+  description String?      @db.Text
+  notes       String?      @db.Text
+  duration    Int?         // Duration in minutes
+  leadId      String?
+  dealId      String?
+  taskId      String?
+  userId      String?      // User ID who performed the activity
+  tenantId    String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  lead        Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal        Deal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  task        Task?        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([leadId])
+  @@index([dealId])
+  @@index([taskId])
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+  @@map("activities")
+}
+

@@ -1,3 +1,5 @@
+"use client";
+
 import { BadgeCheck, Bell, ChevronRightIcon, CreditCard, LogOut, Sparkles } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,26 +15,60 @@ import {
 import Link from "next/link";
 import * as React from "react";
 import { Progress } from "@/components/ui/progress";
+import { useRouter } from "next/navigation";
+import { logout, getCurrentUser } from "@/lib/api/auth";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 export default function UserMenu() {
+  const router = useRouter();
+  const [user, setUser] = useState<{ name: string; email: string; avatar?: string } | null>(null);
+
+  useEffect(() => {
+    const currentUser = getCurrentUser();
+    if (currentUser) {
+      setUser({
+        name: currentUser.name,
+        email: currentUser.email,
+        avatar: currentUser.avatar,
+      });
+    }
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success("Logged out successfully");
+      router.push("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast.error("Failed to logout");
+    }
+  };
+
+  const userData = user || {
+    name: "User",
+    email: "user@example.com",
+    avatar: "/images/avatars/01.png"
+  };
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+        <DropdownMenuTrigger asChild>
         <Avatar>
-          <AvatarImage src={`/images/avatars/01.png`} alt="shadcn ui kit" />
-          <AvatarFallback className="rounded-lg">TB</AvatarFallback>
+          <AvatarImage src={userData.avatar} alt={userData.name} />
+          <AvatarFallback className="rounded-lg">{userData.name.substring(0, 2).toUpperCase()}</AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-(--radix-dropdown-menu-trigger-width) min-w-60" align="end">
         <DropdownMenuLabel className="p-0">
           <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
             <Avatar>
-              <AvatarImage src={`/images/avatars/01.png`} alt="shadcn ui kit" />
-              <AvatarFallback className="rounded-lg">TB</AvatarFallback>
+              <AvatarImage src={userData.avatar} alt={userData.name} />
+              <AvatarFallback className="rounded-lg">{userData.name.substring(0, 2).toUpperCase()}</AvatarFallback>
             </Avatar>
             <div className="grid flex-1 text-left text-sm leading-tight">
-              <span className="truncate font-semibold">Toby Belhome</span>
-              <span className="text-muted-foreground truncate text-xs">hello@tobybelhome.com</span>
+              <span className="truncate font-semibold">{userData.name}</span>
+              <span className="text-muted-foreground truncate text-xs">{userData.email}</span>
             </div>
           </div>
         </DropdownMenuLabel>
@@ -59,7 +95,7 @@ export default function UserMenu() {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={handleLogout}>
           <LogOut />
           Log out
         </DropdownMenuItem>

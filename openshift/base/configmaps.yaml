@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: collector-config
+  namespace: collector-platform
+data:
+  # Global Configuration
+  NODE_ENV: "production"
+  CORS_ORIGIN: "https://collector.example.com"
+  
+  # Service URLs (will be replaced with actual service names in OpenShift)
+  REGISTRY_SERVICE_URL: "http://registry-service:3001"
+  ORDERS_SERVICE_URL: "http://orders-service:3002"
+  OFFERS_SERVICE_URL: "http://offers-service:3003"
+  INVOICES_SERVICE_URL: "http://invoices-service:3004"
+  DELIVERY_SERVICE_URL: "http://delivery-service:3005"
+  INVENTORY_SERVICE_URL: "http://inventory-service:3006"
+  HR_SERVICE_URL: "http://hr-service:3007"
+  PROJECT_MANAGEMENT_SERVICE_URL: "http://project-management-service:3008"
+  
+  # Redis Configuration
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  
+  # RabbitMQ Configuration
+  RABBITMQ_HOST: "rabbitmq-service"
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_VHOST: "collector"
+  
+  # PostgreSQL Configuration (individual services will override)
+  POSTGRES_HOST: "postgres-service"
+  POSTGRES_PORT: "5432"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: collector-database-config
+  namespace: collector-platform
+data:
+  # Database URLs will be created per service
+  # Format: postgresql://user:password@host:port/database?schema=public
+  # Passwords are stored in Secrets
+

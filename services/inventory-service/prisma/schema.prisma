@@ -1,0 +1,246 @@
+// Prisma schema for Inventory & Product Management Microservice
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl", "linux-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Product Category enum
+enum ProductCategory {
+  ELECTRONICS
+  CLOTHING
+  FOOD
+  BOOKS
+  FURNITURE
+  TOOLS
+  MEDICAL
+  OFFICE_SUPPLIES
+  OTHER
+}
+
+// Unit of Measure enum
+enum UnitOfMeasure {
+  PIECE
+  KG
+  LITER
+  BOX
+  PALLET
+  CARTON
+}
+
+// Warehouse Status
+enum WarehouseStatus {
+  ACTIVE
+  INACTIVE
+  MAINTENANCE
+}
+
+// Purchase Order Status
+enum PurchaseOrderStatus {
+  DRAFT
+  SENT
+  RECEIVED
+  CANCELED
+  PARTIALLY_RECEIVED
+}
+
+// Stock Transaction Type
+enum StockTransactionType {
+  IN
+  OUT
+  ADJUSTMENT
+  RESERVED
+  UNRESERVED
+  TRANSFER
+}
+
+// Product entity
+model Product {
+  id             String         @id @default(uuid())
+  sku            String         @unique
+  name           String
+  description    String?
+  unitOfMeasure  UnitOfMeasure  @default(PIECE)
+  price          Decimal        @db.Decimal(10, 2)
+  taxPercent     Decimal        @default(0) @db.Decimal(5, 2)
+  category       ProductCategory
+  tenantId       String
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  
+  // Relations
+  stock          Stock[]
+  purchaseOrderItems PurchaseOrderLineItem[]
+  deliveryNoteSyncs DeliveryNoteSync[]
+  stockTransactions StockTransaction[]
+  
+  @@index([tenantId])
+  @@index([sku])
+  @@index([category])
+  @@index([name])
+  @@map("products")
+}
+
+// Warehouse entity
+model Warehouse {
+  id          String            @id @default(uuid())
+  name        String
+  location    String
+  capacity    Int?
+  status      WarehouseStatus   @default(ACTIVE)
+  tenantId    String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  
+  // Relations
+  stock       Stock[]
+  deliveryNoteSyncs DeliveryNoteSync[]
+  stockTransactions StockTransaction[]
+  
+  @@index([tenantId])
+  @@index([status])
+  @@map("warehouses")
+}
+
+// Stock entity
+model Stock {
+  id                  String      @id @default(uuid())
+  productId           String
+  warehouseId         String
+  quantityAvailable   Int         @default(0)
+  reservedQuantity    Int         @default(0)
+  minimumThreshold    Int         @default(0)
+  reorderLevel        Int         @default(0)
+  reorderQuantity     Int         @default(0)
+  tenantId            String
+  updatedAt           DateTime    @updatedAt
+  
+  // Relations
+  product             Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouse           Warehouse   @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  
+  @@unique([productId, warehouseId])
+  @@index([tenantId])
+  @@index([productId])
+  @@index([warehouseId])
+  @@map("stock")
+}
+
+// Supplier entity
+model Supplier {
+  id          String            @id @default(uuid())
+  name        String
+  email       String?
+  phone       String?
+  address     String?
+  city        String?
+  country     String?
+  taxId       String?
+  status      String            @default("ACTIVE")
+  tenantId    String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  
+  // Relations
+  purchaseOrders PurchaseOrder[]
+  
+  @@index([tenantId])
+  @@index([name])
+  @@map("suppliers")
+}
+
+// Purchase Order entity
+model PurchaseOrder {
+  id            String                @id @default(uuid())
+  poNumber      String                @unique
+  supplierId    String
+  status        PurchaseOrderStatus   @default(DRAFT)
+  orderDate     DateTime              @default(now())
+  expectedDate  DateTime?
+  notes         String?
+  tenantId      String
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  
+  // Relations
+  supplier      Supplier              @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  lineItems     PurchaseOrderLineItem[]
+  
+  @@index([tenantId])
+  @@index([supplierId])
+  @@index([status])
+  @@index([poNumber])
+  @@map("purchase_orders")
+}
+
+// Purchase Order Line Item
+model PurchaseOrderLineItem {
+  id              String        @id @default(uuid())
+  purchaseOrderId String
+  productId       String
+  quantity        Int
+  unitPrice       Decimal       @db.Decimal(10, 2)
+  receivedQuantity Int          @default(0)
+  tenantId        String
+  
+  // Relations
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  product         Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
+  
+  @@index([purchaseOrderId])
+  @@index([productId])
+  @@index([tenantId])
+  @@map("purchase_order_line_items")
+}
+
+// Delivery Note Sync entity
+model DeliveryNoteSync {
+  id              String    @id @default(uuid())
+  deliveryNoteId  String
+  productId       String
+  quantity        Int
+  warehouseId     String
+  transactionType String    // 'IN' or 'OUT'
+  tenantId        String
+  syncedAt        DateTime  @default(now())
+  
+  // Relations
+  product         Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouse       Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId])
+  @@index([deliveryNoteId])
+  @@index([productId])
+  @@index([warehouseId])
+  @@index([syncedAt])
+  @@map("delivery_note_syncs")
+}
+
+// Stock Transaction (audit trail)
+model StockTransaction {
+  id              String                @id @default(uuid())
+  productId       String
+  warehouseId     String
+  transactionType StockTransactionType
+  quantity        Int
+  referenceId     String?               // Reference to order, PO, delivery note, etc.
+  notes           String?
+  tenantId        String
+  createdAt       DateTime              @default(now())
+  
+  // Relations
+  product         Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouse       Warehouse             @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  
+  @@index([tenantId])
+  @@index([productId])
+  @@index([warehouseId])
+  @@index([transactionType])
+  @@index([createdAt])
+  @@map("stock_transactions")
+}
+

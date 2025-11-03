@@ -1,0 +1,199 @@
+// Prisma schema for Orders Processing & Fulfillment Microservice
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl", "linux-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Order Status Enum
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELED
+}
+
+// Payment Status Enum
+enum PaymentStatus {
+  UNPAID
+  PAID
+  REFUNDED
+  FAILED
+  PARTIALLY_REFUNDED
+}
+
+// Payment Provider Enum
+enum PaymentProvider {
+  STRIPE
+  PAYPAL
+  MANUAL
+  BANK_TRANSFER
+  OTHER
+}
+
+// Payment Transaction Status
+enum PaymentTransactionStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  CANCELED
+}
+
+// Order entity
+model Order {
+  id                String       @id @default(uuid())
+  orderNumber       String       @unique
+  offerId           String?      // Reference to approved offer
+  customerId        String       // Reference to customer from registry service
+  status            OrderStatus  @default(PENDING)
+  paymentStatus     PaymentStatus @default(UNPAID)
+  
+  // Financial fields
+  subtotal          Decimal      @db.Decimal(10, 2)
+  taxTotal          Decimal      @db.Decimal(10, 2)
+  shippingCost      Decimal      @db.Decimal(10, 2)
+  discountAmount    Decimal      @default(0) @db.Decimal(10, 2)
+  grandTotal        Decimal      @db.Decimal(10, 2)
+  currency          String       @default("USD")
+  
+  // Relations
+  shippingAddress   ShippingAddress? @relation("OrderShippingAddress")
+  
+  lineItems         OrderLineItem[]
+  payments          Payment[]
+  statusHistory     OrderStatusHistory[]
+  
+  paymentReference  String?
+  
+  // Metadata
+  tenantId          String
+  notes             String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  
+  @@index([tenantId])
+  @@index([orderNumber])
+  @@index([customerId])
+  @@index([offerId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+// Order Line Item entity
+model OrderLineItem {
+  id              String   @id @default(uuid())
+  orderId         String
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  productId       String   // Reference to product from catalog/inventory service
+  description     String
+  quantity        Int
+  unitPrice       Decimal  @db.Decimal(10, 2)
+  discountPercent Decimal  @default(0) @db.Decimal(5, 2)
+  taxPercent      Decimal  @default(0) @db.Decimal(5, 2)
+  totalPrice      Decimal  @db.Decimal(10, 2) // Computed: quantity * unitPrice * (1 - discountPercent/100) * (1 + taxPercent/100)
+  
+  // Inventory tracking
+  sku             String?
+  reserved        Boolean  @default(false)
+  
+  tenantId        String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([orderId])
+  @@index([productId])
+  @@index([tenantId])
+  @@index([sku])
+  @@map("order_line_items")
+}
+
+// Shipping Address entity
+model ShippingAddress {
+  id           String   @id @default(uuid())
+  orderId      String   @unique
+  order        Order    @relation("OrderShippingAddress", fields: [orderId], references: [id], onDelete: Cascade)
+  
+  fullName     String
+  street       String
+  city         String
+  postalCode   String
+  country      String
+  state        String?
+  phone        String?
+  email        String?
+  
+  tenantId     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@index([tenantId])
+  @@index([orderId])
+  @@map("shipping_addresses")
+}
+
+// Payment entity
+model Payment {
+  id                String                 @id @default(uuid())
+  orderId           String
+  order             Order                  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  provider          PaymentProvider
+  paymentReference  String?                @unique // External payment ID (e.g., Stripe charge ID)
+  status            PaymentTransactionStatus @default(PENDING)
+  
+  amount            Decimal                @db.Decimal(10, 2)
+  currency          String                 @default("USD")
+  
+  // Payment metadata
+  paymentMethod     String?                // card, bank_transfer, etc.
+  last4             String?                // Last 4 digits of card
+  transactionId     String?
+  
+  processedAt       DateTime?
+  refundedAt        DateTime?
+  refundAmount      Decimal?               @db.Decimal(10, 2)
+  
+  failureReason     String?
+  
+  tenantId          String
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  
+  @@index([orderId])
+  @@index([paymentReference])
+  @@index([status])
+  @@index([tenantId])
+  @@map("payments")
+}
+
+// Order Status History for audit trail
+model OrderStatusHistory {
+  id          String      @id @default(uuid())
+  orderId     String
+  order       Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  status      OrderStatus
+  paymentStatus PaymentStatus?
+  
+  notes       String?
+  changedBy   String?     // User/system that made the change
+  
+  tenantId    String
+  createdAt   DateTime    @default(now())
+  
+  @@index([orderId])
+  @@index([tenantId])
+  @@index([createdAt])
+  @@map("order_status_history")
+}
+

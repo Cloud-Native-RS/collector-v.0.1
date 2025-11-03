@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: crm-postgres
+    environment:
+      POSTGRES_USER: crm_user
+      POSTGRES_PASSWORD: crm_pass
+      POSTGRES_DB: crm_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crm_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  crm-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crm-service
+    environment:
+      NODE_ENV: development
+      PORT: 3009
+      DATABASE_URL: postgresql://crm_user:crm_pass@postgres:5432/crm_db?schema=public
+      JWT_SECRET: collector_dev_jwt_secret_change_in_production
+      CORS_ORIGIN: http://localhost:3000
+      REGISTRY_SERVICE_URL: http://localhost:3001
+      POSTGRES_DB: crm_db
+      POSTGRES_USER: crm_user
+      POSTGRES_PASSWORD: crm_pass
+    ports:
+      - "3009:3009"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo 'Waiting for database to be ready...' &&
+        until PGPASSWORD=crm_pass psql -h postgres -U crm_user -d crm_db -c 'SELECT 1' > /dev/null 2>&1; do
+          echo 'Database not ready, waiting...'
+          sleep 2
+        done &&
+        echo 'Database is ready!' &&
+        npm run db:migrate:deploy &&
+        npm start
+      "
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3009/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data:
+

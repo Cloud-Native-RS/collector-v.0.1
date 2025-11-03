@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry-service
+  namespace: collector-platform
+  labels:
+    app: registry-service
+    component: microservice
+    tier: backend
+spec:
+  ports:
+  - name: http
+    port: 3001
+    targetPort: 3001
+    protocol: TCP
+  selector:
+    app: registry-service
+  type: ClusterIP
+  sessionAffinity: None
+

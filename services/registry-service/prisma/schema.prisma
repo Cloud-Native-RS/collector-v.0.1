@@ -1,0 +1,244 @@
+// Prisma schema for Customer & Company Registry Microservice
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl", "linux-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Customer Type
+enum CustomerType {
+  INDIVIDUAL
+  COMPANY
+}
+
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+  ARCHIVED
+}
+
+enum CompanyType {
+  CORPORATION
+  LLC
+  LTD
+  GMBH
+  SARL
+  OTHER
+}
+
+enum CompanyStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+  LIQUIDATED
+}
+
+// Customer entity
+model Customer {
+  id                 String       @id @default(uuid())
+  type               CustomerType
+  customerNumber     String       @unique
+  firstName          String?
+  lastName           String?
+  title              String?
+  department         String?
+  companyName        String?
+  email              String       @unique
+  phone              String?
+  taxId              String       @unique
+  registrationNumber String?
+
+  // Relations
+  addressId String
+  address   Address @relation(fields: [addressId], references: [id], onDelete: Cascade)
+
+  contactId String
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  bankAccountId String?
+  bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  status    CustomerStatus @default(PENDING)
+  tenantId  String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([tenantId])
+  @@index([taxId])
+  @@index([email])
+  @@index([customerNumber])
+  @@index([companyId])
+  @@map("customers")
+}
+
+// Address entity
+model Address {
+  id        String   @id @default(uuid())
+  street    String
+  city      String
+  state     String?
+  zipCode   String
+  country   String
+  tenantId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Reverse relations
+  customers Customer[]
+  companies Company[]
+
+  @@index([tenantId])
+  @@map("addresses")
+}
+
+// Contact entity
+model Contact {
+  id        String   @id @default(uuid())
+  email     String
+  phone     String?
+  website   String?
+  tenantId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Reverse relations
+  customers Customer[]
+  companies Company[]
+
+  @@index([tenantId])
+  @@index([email])
+  @@map("contacts")
+}
+
+// Bank Account entity
+model BankAccount {
+  id            String   @id @default(uuid())
+  bankName      String
+  accountNumber String
+  routingNumber String?
+  iban          String?  @unique
+  swift         String?
+  tenantId      String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Reverse relations
+  customers Customer[]
+  companies Company[]
+
+  @@index([tenantId])
+  @@index([iban])
+  @@map("bank_accounts")
+}
+
+// Company entity
+model Company {
+  id                 String        @id @default(uuid())
+  companyType        CompanyType
+  companyNumber      String        @unique
+  legalName          String        @unique
+  tradingName        String?
+  taxId              String        @unique
+  registrationNumber String
+  status             CompanyStatus @default(PENDING)
+  industry           String?
+
+  // Legal representative
+  legalRepName  String?
+  legalRepTitle String?
+  legalRepEmail String?
+  legalRepPhone String?
+
+  // Relations
+  addressId String
+  address   Address @relation(fields: [addressId], references: [id], onDelete: Cascade)
+
+  contactId String
+  contact   Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  bankAccountId String?
+  bankAccount   BankAccount? @relation(fields: [bankAccountId], references: [id], onDelete: SetNull)
+
+  contacts Customer[] // One company can have many contacts (INDIVIDUAL customers)
+
+  tenantId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tenantId])
+  @@index([taxId])
+  @@index([registrationNumber])
+  @@index([legalName])
+  @@index([companyNumber])
+  @@map("companies")
+}
+
+// Tenant entity
+model Tenant {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  displayName String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  users        UserTenant[]
+  primaryUsers User[]       @relation("UserPrimaryTenant")
+
+  @@index([name])
+  @@map("tenants")
+}
+
+// User entity for authentication
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  password        String
+  name            String
+  avatar          String?
+  bio             String? // User biography
+  urls            String[]  @default([]) // Array of user URLs (website, social media, etc.)
+  dateOfBirth     DateTime? // Date of birth
+  language        String?   @default("en") // Preferred language
+  primaryTenantId String? // Default/primary tenant
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  tenants       UserTenant[]
+  primaryTenant Tenant?      @relation("UserPrimaryTenant", fields: [primaryTenantId], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@index([primaryTenantId])
+  @@map("users")
+}
+
+// Many-to-many relationship between User and Tenant
+model UserTenant {
+  id        String   @id @default(uuid())
+  userId    String
+  tenantId  String
+  role      String   @default("user") // user, admin, owner
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tenantId])
+  @@index([userId])
+  @@index([tenantId])
+  @@map("user_tenants")
+}
