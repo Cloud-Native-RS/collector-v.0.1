@@ -39,6 +39,7 @@ export default function EditLeadDialog({
 }: EditLeadDialogProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<Omit<Lead, "id" | "createdAt" | "updatedAt">>({
+    title: "",
     name: "",
     company: "",
     email: "",
@@ -53,6 +54,7 @@ export default function EditLeadDialog({
   useEffect(() => {
     if (lead) {
       setFormData({
+        title: lead.title || "",
         name: lead.name,
         company: lead.company || "",
         email: lead.email,
@@ -74,6 +76,7 @@ export default function EditLeadDialog({
     try {
       setLoading(true);
       await crmApi.updateLead(lead.id, {
+        title: formData.title || undefined,
         name: formData.name,
         email: formData.email,
         phone: formData.phone || undefined,
@@ -106,14 +109,26 @@ export default function EditLeadDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
+              <Label htmlFor="title">Lead Title</Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                placeholder="e.g. Website Redesign Project"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="name">Contact Name *</Label>
               <Input
                 id="name"
                 required
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="John Doe"
               />
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="company">Company</Label>
               <Input

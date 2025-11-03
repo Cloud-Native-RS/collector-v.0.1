@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { PlusIcon } from "@radix-ui/react-icons";
+import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import {
@@ -86,7 +86,7 @@ export default function MyWallet() {
         <CardDescription>A total of 4 cards are listed</CardDescription>
         <CardAction>
           <Button variant="outline" size="sm">
-            <PlusIcon /> Add New
+            <Plus /> Add New
           </Button>
         </CardAction>
       </CardHeader>

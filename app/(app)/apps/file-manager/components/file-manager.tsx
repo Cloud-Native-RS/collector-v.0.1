@@ -358,7 +358,7 @@ export function FileManager() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon">
-                        <ChevronDownIcon />
+                        <ChevronDown />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="start">

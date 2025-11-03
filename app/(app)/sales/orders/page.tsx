@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { PlusIcon } from "@radix-ui/react-icons";
+import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -52,7 +52,7 @@ export default function SalesOrdersPage() {
         <h1 className="text-xl font-bold tracking-tight lg:text-2xl">Orders</h1>
         <Button asChild>
           <Link href="/pages/orders/create">
-            <PlusIcon /> Create Order
+            <Plus /> Create Order
           </Link>
         </Button>
       </div>

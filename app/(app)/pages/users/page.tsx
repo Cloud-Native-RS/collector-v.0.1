@@ -4,7 +4,7 @@ import path from "path";
 import Link from "next/link";
 import { generateMeta } from "@/lib/utils";
 
-import { PlusCircledIcon } from "@radix-ui/react-icons";
+import { PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import UsersDataTable from "./data-table";
 
@@ -33,7 +33,7 @@ export default async function Page() {
         <h1 className="text-2xl font-bold tracking-tight">Users</h1>
         <Button asChild>
           <Link href="#">
-            <PlusCircledIcon /> Add New User
+            <PlusCircle /> Add New User
           </Link>
         </Button>
       </div>

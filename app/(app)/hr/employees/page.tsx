@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PlusIcon } from "@radix-ui/react-icons";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { employeesApi, Employee } from "@/lib/api/hr";
 import { toast } from "sonner";

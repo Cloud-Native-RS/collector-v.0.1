@@ -27,7 +27,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { Calendar } from "@/components/ui/calendar";
 import { useState } from "react";
-import { PlusCircledIcon } from "@radix-ui/react-icons";
+import { PlusCircle } from "lucide-react";
 import { toast } from "sonner";
 
 const formSchema = z.object({
@@ -54,7 +54,7 @@ export default function CreateApiKeyDialog() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogTrigger asChild>
           <Button>
-            <PlusCircledIcon /> Create Api Key
+            <PlusCircle /> Create Api Key
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-[425px]">

@@ -595,7 +595,7 @@ export default function KanbanBoard() {
                     size="icon"
                     disabled={!newColumnTitle.trim()}
                     onClick={() => addColumn(newColumnTitle.trim())}>
-                    <CheckIcon />
+                    <Check />
                   </Button>
                 </div>
               </DialogContent>

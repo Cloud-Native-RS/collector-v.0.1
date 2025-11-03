@@ -2,7 +2,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { generateMeta } from "@/lib/utils";
 import Link from "next/link";
-import { PlusIcon } from "@radix-ui/react-icons";
+import { Plus } from "lucide-react";
 import { Metadata } from "next";
 
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ export default async function Page() {
         <h1 className="text-2xl font-bold tracking-tight">Products</h1>
         <Button asChild>
           <Link href="/dashboard/pages/products/create">
-            <PlusIcon /> Add Product
+            <Plus /> Add Product
           </Link>
         </Button>
       </div>

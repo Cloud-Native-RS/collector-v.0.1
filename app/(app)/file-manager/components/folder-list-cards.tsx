@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { StarFilledIcon } from "@radix-ui/react-icons";
+import { Star as StarFilledIcon } from "lucide-react";
 
 interface Folder {
   id: string;

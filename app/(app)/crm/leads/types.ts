@@ -4,6 +4,7 @@ export type LeadSource = "website" | "social" | "email" | "call" | "referral" | 
 
 export interface Lead {
   id: string;
+  title?: string;
   name: string;
   company?: string;
   companyType?: string;

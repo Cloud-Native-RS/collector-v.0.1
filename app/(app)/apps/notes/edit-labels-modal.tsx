@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { noteLabels } from "@/app/(app)/apps/notes/data";
-import { PlusIcon } from "@radix-ui/react-icons";
+import { Plus } from "lucide-react";
 
 interface Props {
   children: React.ReactNode;
@@ -100,7 +100,7 @@ export function EditLabelsModal({ children }: Props) {
                 className="flex-1 ps-9"
               />
               <Button size="icon" disabled={!newLabelName.trim()}>
-                <PlusIcon />
+                <Plus />
               </Button>
             </div>
 

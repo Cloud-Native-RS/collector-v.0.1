@@ -59,10 +59,19 @@ async function proxyRequest(
     return NextResponse.json(data, { status: response.status });
   } catch (error: any) {
     console.error('Analytics pipeline API proxy error:', error);
+    
+    // Provide more descriptive error messages
+    let errorMessage = 'Failed to connect to CRM service';
+    if (error.message?.includes('fetch failed') || error.message?.includes('Failed to fetch')) {
+      errorMessage = `Cannot connect to CRM service at ${CRM_SERVICE_URL}. Please ensure the service is running.`;
+    } else if (error.message) {
+      errorMessage = `CRM service error: ${error.message}`;
+    }
+    
     return NextResponse.json(
       { 
         success: false, 
-        error: 'Failed to connect to CRM service',
+        error: errorMessage,
         message: error.message || 'Unknown error'
       },
       { status: 500 }

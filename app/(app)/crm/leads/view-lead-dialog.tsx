@@ -204,10 +204,17 @@ export default function ViewLeadDialog({
 						<div className="flex items-start justify-between">
 							<div className="space-y-2 flex-1">
 								<DialogTitle className="text-2xl font-bold">
-									{lead.name}
+									{lead.title || lead.name}
 								</DialogTitle>
 								<DialogDescription className="text-sm">
-									Lead Details & Information
+									{lead.title ? (
+										<span>
+											<span className="text-muted-foreground">Contact: </span>
+											{lead.name}
+										</span>
+									) : (
+										"Lead Details & Information"
+									)}
 								</DialogDescription>
 							</div>
 							<div className="flex items-center gap-2">
@@ -315,10 +322,18 @@ export default function ViewLeadDialog({
 							Contact Information
 						</h3>
 						<div className="space-y-3">
+							{lead.title && (
+								<div>
+									<div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">
+										Lead Title
+									</div>
+									<p className="text-sm font-medium">{lead.title}</p>
+								</div>
+							)}
 							<div className="grid grid-cols-2 gap-4">
 								<div>
 									<div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider block mb-1.5">
-										Full Name
+										Contact Name
 									</div>
 									<p className="text-sm font-medium">{lead.name}</p>
 								</div>

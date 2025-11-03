@@ -101,39 +101,39 @@ export default function CalendarDateRangePicker({
   return (
     <div className={cn("grid gap-2", className)}>
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          {isMobile ? (
-            <div>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      id="date"
-                      variant={"outline"}
-                      className={cn(
-                        "justify-start text-left font-normal",
-                        !date && "text-muted-foreground"
-                      )}>
-                      <CalendarIcon />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {date?.from ? (
-                      date.to ? (
-                        <>
-                          {format(date.from, "dd MMM yyyy")} - {format(date.to, "dd MMM yyyy")}
-                        </>
-                      ) : (
-                        format(date.from, "dd MMM yyyy")
-                      )
-                    ) : (
-                      <span>Select date range</span>
-                    )}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          ) : (
+        {isMobile ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span>
+                <PopoverTrigger asChild>
+                  <Button
+                    id="date"
+                    variant={"outline"}
+                    className={cn(
+                      "justify-start text-left font-normal",
+                      !date && "text-muted-foreground"
+                    )}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+              </span>
+            </TooltipTrigger>
+            <TooltipContent>
+              {date?.from ? (
+                date.to ? (
+                  <>
+                    {format(date.from, "dd MMM yyyy")} - {format(date.to, "dd MMM yyyy")}
+                  </>
+                ) : (
+                  format(date.from, "dd MMM yyyy")
+                )
+              ) : (
+                <span>Select date range</span>
+              )}
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <PopoverTrigger asChild>
             <Button
               id="date"
               variant={"outline"}
@@ -141,7 +141,7 @@ export default function CalendarDateRangePicker({
                 "justify-start text-left font-normal",
                 !date && "text-muted-foreground"
               )}>
-              <CalendarIcon />
+              <CalendarIcon className="mr-2 h-4 w-4" />
               {date?.from ? (
                 date.to ? (
                   <>
@@ -154,8 +154,8 @@ export default function CalendarDateRangePicker({
                 <span>Select date range</span>
               )}
             </Button>
-          )}
-        </PopoverTrigger>
+          </PopoverTrigger>
+        )}
         <PopoverContent className="w-auto" align="end">
           <div className="flex flex-col lg:flex-row">
             <div className="me-0 lg:me-4">

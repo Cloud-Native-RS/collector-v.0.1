@@ -1,7 +1,6 @@
 "use client";
 
-import { PlusIcon } from "@radix-ui/react-icons";
-import { ChevronsUpDown, Building2 } from "lucide-react";
+import { Plus, ChevronsUpDown, Building2 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import type { ComponentProps } from "react";
 import { useEffect, useState } from "react";
@@ -184,7 +183,7 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
 										className="w-full justify-start gap-2"
 										onClick={() => setIsCreateDialogOpen(true)}
 									>
-										<PlusIcon className="size-4" />
+										<Plus className="size-4" />
 										New Company
 									</Button>
 								</div>

@@ -20,7 +20,7 @@ import { AccountSwitcher } from "./account-switcher";
 import { accounts } from "../data";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { HamburgerMenuIcon } from "@radix-ui/react-icons";
+import { Menu } from "lucide-react";
 import { DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
@@ -29,7 +29,7 @@ export function NavMobile() {
     <Sheet>
       <SheetTrigger asChild>
         <Button variant="ghost" size="icon">
-          <HamburgerMenuIcon />
+          <Menu />
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="overflow-auto [&>button:first-of-type]:hidden">

@@ -191,7 +191,12 @@ export async function fetchWithAuth<T = any>(
       throw error;
     }
     if (error instanceof Error) {
-      throw new ApiError(error.message, 0, 'NETWORK_ERROR');
+      // Provide more descriptive error messages for common network errors
+      let errorMessage = error.message;
+      if (error.message.includes('fetch failed') || error.message.includes('Failed to fetch')) {
+        errorMessage = `Unable to connect to the server. Please check if the service is running. Original error: ${error.message}`;
+      }
+      throw new ApiError(errorMessage, 0, 'NETWORK_ERROR');
     }
     throw new ApiError('An unknown error occurred', 0, 'UNKNOWN_ERROR');
   }

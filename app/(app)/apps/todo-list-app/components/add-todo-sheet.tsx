@@ -214,7 +214,7 @@ const AddTodoSheet: React.FC<AddTodoSheetProps> = ({ isOpen, onClose, editTodoId
                             "w-full justify-start text-left font-normal",
                             !field.value && "text-muted-foreground"
                           )}>
-                          <CalendarIcon />
+                          <Calendar />
                           {field.value ? format(field.value, "PPP") : "Select a date"}
                         </Button>
                       </PopoverTrigger>
@@ -248,7 +248,7 @@ const AddTodoSheet: React.FC<AddTodoSheetProps> = ({ isOpen, onClose, editTodoId
                             "w-full justify-start text-left font-normal",
                             !field.value && "text-muted-foreground"
                           )}>
-                          <CalendarIcon />
+                          <Calendar />
                           {field.value ? format(field.value, "PPP") : "Select a date"}
                         </Button>
                       </PopoverTrigger>

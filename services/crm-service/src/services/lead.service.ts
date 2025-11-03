@@ -6,6 +6,7 @@ export class LeadService {
   constructor(private prisma: PrismaClient) {}
 
   async create(data: {
+    title?: string;
     name: string;
     email: string;
     phone?: string;
@@ -109,6 +110,7 @@ export class LeadService {
 
     if (search) {
       where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
         { name: { contains: search, mode: 'insensitive' } },
         { email: { contains: search, mode: 'insensitive' } },
         { company: { contains: search, mode: 'insensitive' } },
@@ -134,6 +136,7 @@ export class LeadService {
     id: string,
     tenantId: string,
     data: Partial<{
+      title?: string;
       name: string;
       email: string;
       phone: string;

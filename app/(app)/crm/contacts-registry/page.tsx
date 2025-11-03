@@ -50,10 +50,13 @@ function transformCustomerToContact(customer: Customer): Contact {
   
   const companyId = customer.companyId ? parseInt(customer.companyId.replace(/\D/g, '')) : null;
   
+  // Safely handle address - provide defaults if missing
+  const address = customer.address || {};
+  
   return {
     id: parseInt(customer.id.replace(/\D/g, '')) || Math.random() * 1000000, // Convert UUID to number
     originalId: customer.id, // Keep original UUID for API calls
-    contactNumber: customer.customerNumber,
+    contactNumber: customer.customerNumber || '',
     firstName: customer.firstName ? String(customer.firstName).trim() : '',
     lastName: customer.lastName ? String(customer.lastName).trim() : '',
     email: email,
@@ -63,17 +66,17 @@ function transformCustomerToContact(customer: Customer): Contact {
     companyId: companyId,
     companyName: companyName,
     companyLegalName: companyLegalName,
-    status: mapCustomerStatus(customer.status),
+    status: mapCustomerStatus(customer.status || 'PENDING'),
     address: {
-      street: customer.address.street,
-      city: customer.address.city,
-      state: customer.address.state || null,
-      zipCode: customer.address.zipCode,
-      country: customer.address.country,
+      street: address.street || '',
+      city: address.city || '',
+      state: address.state || null,
+      zipCode: address.zipCode || '',
+      country: address.country || '',
     },
-    tenantId: customer.tenantId,
-    createdAt: customer.createdAt,
-    updatedAt: customer.updatedAt,
+    tenantId: customer.tenantId || '',
+    createdAt: customer.createdAt || new Date().toISOString(),
+    updatedAt: customer.updatedAt || new Date().toISOString(),
   };
 }
 

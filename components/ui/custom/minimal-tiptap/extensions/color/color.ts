@@ -1,4 +1,4 @@
-import { Color as TiptapColor } from '@tiptap/extension-color'
+import TiptapColor from '@tiptap/extension-color'
 import { Plugin } from '@tiptap/pm/state'
 
 export const Color = TiptapColor.extend({

@@ -7,6 +7,8 @@ import { useParams } from "next/navigation";
 import {
   ArrowUpIcon,
   BrainIcon,
+  Code,
+  Copy,
   DribbbleIcon,
   GlobeIcon,
   MicIcon,
@@ -16,7 +18,6 @@ import {
   ThumbsUpIcon,
   X
 } from "lucide-react";
-import { CodeIcon, CopyIcon } from "@radix-ui/react-icons";
 import Lottie from "lottie-react";
 
 import {
@@ -215,7 +216,7 @@ export default function AIChatInterface() {
                       )}>
                       <MessageAction tooltip="Copy" delayDuration={100}>
                         <Button variant="ghost" size="icon" className="rounded-full">
-                          <CopyIcon />
+                          <Copy />
                         </Button>
                       </MessageAction>
                       <MessageAction tooltip="Upvote" delayDuration={100}>
@@ -418,7 +419,7 @@ const suggestionGroups = [
     items: ["Summarize a document", "Summarize a video", "Summarize a podcast", "Summarize a book"]
   },
   {
-    icon: CodeIcon,
+    icon: Code,
     label: "Code",
     highlight: "Help me",
     items: [

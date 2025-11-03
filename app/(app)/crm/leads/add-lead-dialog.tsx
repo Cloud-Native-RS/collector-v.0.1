@@ -30,6 +30,7 @@ interface AddLeadDialogProps {
 }
 
 interface LeadFormData {
+  title: string;
   name: string;
   email: string;
   phone: string;
@@ -59,6 +60,7 @@ export default function AddLeadDialog({
 }: AddLeadDialogProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<LeadFormData>({
+    title: "",
     name: "",
     email: "",
     phone: "",
@@ -83,6 +85,7 @@ export default function AddLeadDialog({
 
   const resetForm = () => {
     setFormData({
+      title: "",
       name: "",
       email: "",
       phone: "",
@@ -133,6 +136,7 @@ export default function AddLeadDialog({
       setLoading(true);
 
       const createData: CreateLeadInput = {
+        title: formData.title.trim() || undefined,
         name: formData.name.trim(),
         email: formData.email.trim(),
         source: formData.source,
@@ -223,8 +227,21 @@ export default function AddLeadDialog({
             <h3 className="text-sm font-semibold text-foreground">Basic Information</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
+                <Label htmlFor="title">
+                  Lead Title <span className="text-muted-foreground text-xs">(Optional)</span>
+                </Label>
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) =>
+                    setFormData({ ...formData, title: e.target.value })
+                  }
+                  placeholder="e.g. Website Redesign Project"
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="name">
-                  Name * <span className="text-muted-foreground text-xs">(Person or Company)</span>
+                  Contact Name * <span className="text-muted-foreground text-xs">(Person Name)</span>
                 </Label>
                 <Input
                   id="name"
@@ -233,9 +250,11 @@ export default function AddLeadDialog({
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
-                  placeholder="John Doe or Company Name"
+                  placeholder="John Doe"
                 />
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email *</Label>
                 <Input

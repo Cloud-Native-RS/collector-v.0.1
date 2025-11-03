@@ -16,8 +16,7 @@ import {
   SidebarMenuItem,
   useSidebar
 } from "@/components/ui/sidebar";
-import { BellIcon, CreditCardIcon, LogOutIcon, UserCircle2Icon } from "lucide-react";
-import { DotsVerticalIcon } from "@radix-ui/react-icons";
+import { BellIcon, CreditCardIcon, LogOutIcon, UserCircle2Icon, MoreVertical } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { logout, getCurrentUser } from "@/lib/api/auth";
 import { useEffect, useState } from "react";
@@ -73,7 +72,7 @@ export function NavUser() {
                 <span className="truncate font-medium" suppressHydrationWarning>{userData.name}</span>
                 <span className="text-muted-foreground truncate text-xs" suppressHydrationWarning>{userData.email || "user@example.com"}</span>
               </div>
-              <DotsVerticalIcon className="ml-auto size-4" />
+              <MoreVertical className="ml-auto size-4" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent

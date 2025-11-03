@@ -16,6 +16,7 @@ export type ActivityType = 'CALL' | 'EMAIL' | 'MEETING' | 'NOTE';
 export interface Lead {
   id: string;
   leadNumber: string;
+  title?: string;
   name: string;
   email: string;
   phone?: string;
@@ -111,6 +112,7 @@ export interface Activity {
 }
 
 export interface CreateLeadInput {
+  title?: string;
   name: string;
   email: string;
   phone?: string;

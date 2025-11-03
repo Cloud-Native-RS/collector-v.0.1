@@ -54,6 +54,10 @@ export default function DealsKanbanBoard({
 	const [searchQuery, setSearchQuery] = React.useState("");
 	const [isUpdating, setIsUpdating] = React.useState<string | null>(null);
 
+	React.useEffect(() => {
+		console.log("DealsKanbanBoard rendered with deals:", deals.length);
+	}, [deals]);
+
 	// Organize deals by stage
 	const columnsData = React.useMemo(() => {
 		const columns: Record<string, Deal[]> = {
@@ -86,8 +90,13 @@ export default function DealsKanbanBoard({
 
 	const handleDragEnd = async (event: DragEndEvent) => {
 		const { active, over } = event;
+		
+		console.log("Drag end:", { activeId: active.id, overId: over?.id });
 
-		if (!over || active.id === over.id) return;
+		if (!over || active.id === over.id) {
+			console.log("Drag cancelled: no over target or same position");
+			return;
+		}
 
 		// Get deal ID - could be from active.id directly or from the deal object
 		let dealId: string;
@@ -245,80 +254,76 @@ export default function DealsKanbanBoard({
 											value={deal.id}
 											disabled={isUpdating === deal.id}
 											asHandle
-											asChild
+											className={cn(
+												"rounded-lg border bg-card p-4 shadow-sm transition-shadow hover:shadow-md cursor-grab active:cursor-grabbing",
+												isUpdating === deal.id && "opacity-50",
+											)}
 										>
-											<div
-												className={cn(
-													"rounded-lg border bg-card p-4 shadow-sm transition-shadow hover:shadow-md cursor-pointer",
-													isUpdating === deal.id && "opacity-50",
-												)}
-											>
-												<div className="flex items-start justify-between mb-2">
-													<div className="flex-1">
-														<h4 className="font-medium text-sm mb-1 line-clamp-2">
-															{deal.title}
-														</h4>
-														<p className="text-xs text-muted-foreground mb-2">
-															{deal.dealNumber}
-														</p>
-													</div>
-												</div>
-
-												{deal.description && (
-													<p className="text-xs text-muted-foreground mb-3 line-clamp-2">
-														{deal.description}
+											<div className="flex items-start justify-between mb-2">
+												<div className="flex-1">
+													<h4 className="font-medium text-sm mb-1 line-clamp-2">
+														{deal.title}
+													</h4>
+													<p className="text-xs text-muted-foreground mb-2">
+														{deal.dealNumber}
 													</p>
+												</div>
+											</div>
+
+											{deal.description && (
+												<p className="text-xs text-muted-foreground mb-3 line-clamp-2">
+													{deal.description}
+												</p>
+											)}
+
+											<div className="space-y-2">
+												<div className="flex items-center justify-between">
+													<span className="text-xs font-medium text-muted-foreground">
+														Value
+													</span>
+													<span className="text-sm font-semibold">
+														${deal.value.toLocaleString()}
+													</span>
+												</div>
+
+												<div className="space-y-1">
+													<div className="flex items-center justify-between">
+														<span className="text-xs text-muted-foreground">
+															Probability
+														</span>
+														<span className="text-xs font-medium">
+															{deal.probability}%
+														</span>
+													</div>
+													<Progress
+														value={deal.probability}
+														className="h-1.5"
+													/>
+												</div>
+
+												{deal.expectedCloseDate && (
+													<div className="flex items-center justify-between text-xs">
+														<span className="text-muted-foreground">
+															Expected Close
+														</span>
+														<span>
+															{new Date(
+																deal.expectedCloseDate,
+															).toLocaleDateString()}
+														</span>
+													</div>
 												)}
 
-												<div className="space-y-2">
-													<div className="flex items-center justify-between">
-														<span className="text-xs font-medium text-muted-foreground">
-															Value
+												{deal.assignedTo && (
+													<div className="flex items-center justify-between text-xs pt-1 border-t">
+														<span className="text-muted-foreground">
+															Assigned
 														</span>
-														<span className="text-sm font-semibold">
-															${deal.value.toLocaleString()}
+														<span className="font-medium">
+															{deal.assignedTo}
 														</span>
 													</div>
-
-													<div className="space-y-1">
-														<div className="flex items-center justify-between">
-															<span className="text-xs text-muted-foreground">
-																Probability
-															</span>
-															<span className="text-xs font-medium">
-																{deal.probability}%
-															</span>
-														</div>
-														<Progress
-															value={deal.probability}
-															className="h-1.5"
-														/>
-													</div>
-
-													{deal.expectedCloseDate && (
-														<div className="flex items-center justify-between text-xs">
-															<span className="text-muted-foreground">
-																Expected Close
-															</span>
-															<span>
-																{new Date(
-																	deal.expectedCloseDate,
-																).toLocaleDateString()}
-															</span>
-														</div>
-													)}
-
-													{deal.assignedTo && (
-														<div className="flex items-center justify-between text-xs pt-1 border-t">
-															<span className="text-muted-foreground">
-																Assigned
-															</span>
-															<span className="font-medium">
-																{deal.assignedTo}
-															</span>
-														</div>
-													)}
-												</div>
+												)}
 											</div>
 										</Kanban.Item>
 									))}

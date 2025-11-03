@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { BadgeCheckIcon, BriefcaseBusinessIcon, ClockIcon } from "lucide-react";
-import { DownloadIcon } from "@radix-ui/react-icons";
+import { BadgeCheckIcon, BriefcaseBusinessIcon, ClockIcon, Download } from "lucide-react";
 
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -43,7 +42,7 @@ export function LatestActivity() {
             </p>
             <Button variant="outline" asChild>
               <Link href="#">
-                <DownloadIcon /> Download ZIP
+                <Download /> Download ZIP
               </Link>
             </Button>
           </li>
