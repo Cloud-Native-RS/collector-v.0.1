@@ -623,9 +623,9 @@ export default function ContactsDataTable({
               table.setPageSize(Number(value));
             }}
           >
-            <SelectTrigger className="w-[60px] h-6 text-xs">
-              <SelectValue />
-            </SelectTrigger>
+              <SelectTrigger className="w-[70px] h-6 text-xs">
+                <SelectValue />
+              </SelectTrigger>
             <SelectContent>
               <SelectItem value="10">10</SelectItem>
               <SelectItem value="25">25</SelectItem>

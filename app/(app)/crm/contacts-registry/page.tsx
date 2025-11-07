@@ -120,7 +120,7 @@ export default function ContactsRegistryPage() {
       if (individualCustomers.length === 0) {
         console.warn(`No INDIVIDUAL customers found. Total customers: ${allCustomers.length}. Make sure you have contacts (not companies) in the database. You may need to run the seed script.`);
       } else {
-        console.log(`Found ${individualCustomers.length} INDIVIDUAL contacts out of ${allCustomers.length} total customers.`);
+        if (process.env.NODE_ENV === "development") console.log(`Found ${individualCustomers.length} INDIVIDUAL contacts out of ${allCustomers.length} total customers.`);
       }
       
       const transformed: Contact[] = [];
@@ -130,7 +130,7 @@ export default function ContactsRegistryPage() {
       // Debug: Log first customer to see what data structure we're getting
       if (individualCustomers.length > 0) {
         const firstCustomer = individualCustomers[0];
-        console.log('Sample customer data from API:', {
+        if (process.env.NODE_ENV === "development") console.log('Sample customer data from API:', {
           id: firstCustomer.id,
           firstName: firstCustomer.firstName,
           lastName: firstCustomer.lastName,
@@ -153,7 +153,7 @@ export default function ContactsRegistryPage() {
           if (!customerWithCompany.company && customerWithCompany.companyId) {
             const company = companiesMap.get(customerWithCompany.companyId);
             if (company) {
-              console.log(`Found company in map for customer ${customer.id}:`, company.legalName);
+              if (process.env.NODE_ENV === "development") console.log(`Found company in map for customer ${customer.id}:`, company.legalName);
               customerWithCompany.company = company;
             } else {
               console.warn(`Company not found in map for companyId: ${customerWithCompany.companyId} (customer: ${customer.id})`);
@@ -173,7 +173,7 @@ export default function ContactsRegistryPage() {
         }
       }
       
-      console.log(`Transformed ${transformed.length} contacts. ${contactsWithCompany} have company, ${contactsWithDepartment} have department.`);
+      if (process.env.NODE_ENV === "development") console.log(`Transformed ${transformed.length} contacts. ${contactsWithCompany} have company, ${contactsWithDepartment} have department.`);
       
       setContacts(transformed);
     } catch (error) {

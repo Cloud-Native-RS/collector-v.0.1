@@ -3,10 +3,17 @@
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowUpDown, Eye } from "lucide-react";
+import { ArrowUpDown, Eye, ExternalLink, Link2, Download, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { offersApi, Offer } from "@/lib/api/offers";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -52,35 +59,48 @@ export default function OfferDataTable({
     let cancelled = false;
     async function loadCustomers() {
       if (!uniqueCustomerIds.length) return;
+      
+      const idsToLoad = uniqueCustomerIds.filter((id) => !(id in customerNameById));
+      if (!idsToLoad.length) return;
+
+      console.log('[OfferDataTable] Loading customer names for IDs:', idsToLoad);
+      
       try {
         const entries = await Promise.all(
-          uniqueCustomerIds
-            .filter((id) => !(id in customerNameById))
-            .map(async (id) => {
-              try {
-                const res = await customersApi.getById(id);
-                const c = res.data as Customer;
-                const name = c.type === 'COMPANY'
-                  ? (c.companyName || c.customerNumber)
-                  : [c.firstName, c.lastName].filter(Boolean).join(' ') || c.customerNumber;
-                return [id, name] as const;
-              } catch {
-                return [id, id] as const;
-              }
-            })
+          idsToLoad.map(async (id) => {
+            try {
+              console.log('[OfferDataTable] Fetching customer:', id);
+              const res = await customersApi.getById(id);
+              const c = res.data as Customer;
+              console.log('[OfferDataTable] Customer data:', c);
+              
+              const name = c.type === 'COMPANY'
+                ? (c.companyName || c.customerNumber)
+                : [c.firstName, c.lastName].filter(Boolean).join(' ') || c.customerNumber;
+              
+              console.log('[OfferDataTable] Mapped name for', id, ':', name);
+              return [id, name] as const;
+            } catch (error) {
+              console.warn('[OfferDataTable] Customer not found:', id);
+              return [id, '⚠️ Customer Not Found'] as const;
+            }
+          })
         );
+        
         if (!cancelled && entries.length) {
-          setCustomerNameById((prev) => ({ ...prev, ...Object.fromEntries(entries) }));
+          const nameMap = Object.fromEntries(entries);
+          console.log('[OfferDataTable] Setting customer names:', nameMap);
+          setCustomerNameById((prev) => ({ ...prev, ...nameMap }));
         }
-      } catch {
-        // Silent fail; keep IDs if lookup fails
+      } catch (error) {
+        console.error('[OfferDataTable] Error loading customers:', error);
       }
     }
     loadCustomers();
     return () => {
       cancelled = true;
     };
-  }, [uniqueCustomerIds]);
+  }, [uniqueCustomerIds, customerNameById]);
 
   const openPreview = async (offerId: string) => {
     try {
@@ -93,11 +113,19 @@ export default function OfferDataTable({
       // Load customer details if not already loaded
       if (offer.customerId && !customerDetails[offer.customerId]) {
         try {
-          const customerRes = await customersApi.getById(offer.customerId);
+          const customerRes = await customersApi.getById(offer.customerId, true);
           const customer = customerRes.data;
           setCustomerDetails(prev => ({ ...prev, [offer.customerId]: customer }));
-        } catch (error) {
-          console.error('Failed to load customer details:', error);
+        } catch (error: any) {
+          // Customer not found - this is not a critical error for preview
+          // Just use the customer ID as fallback
+          setCustomerDetails(prev => ({ 
+            ...prev, 
+            [offer.customerId]: { 
+              id: offer.customerId,
+              companyName: customerNameById[offer.customerId] || offer.customerId 
+            } 
+          }));
         }
       }
     } catch (error: any) {
@@ -137,7 +165,7 @@ export default function OfferDataTable({
           <TableRow>
             <TableHead>#</TableHead>
             <TableHead>Offer Number</TableHead>
-            <TableHead>Customer ID</TableHead>
+            <TableHead>Customer</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Issue Date</TableHead>
             <TableHead>Valid Until</TableHead>
@@ -161,7 +189,23 @@ export default function OfferDataTable({
                   {offer.offerNumber}
                 </button>
               </TableCell>
-              <TableCell>{customerNameById[offer.customerId] || offer.customerId}</TableCell>
+              <TableCell>
+                {customerNameById[offer.customerId] ? (
+                  customerNameById[offer.customerId].includes('Not Found') ? (
+                    <span className="text-orange-600 dark:text-orange-400 text-sm flex items-center gap-1">
+                      <span>⚠️</span>
+                      <span className="font-medium">Customer Not Found</span>
+                    </span>
+                  ) : (
+                    <span className="font-medium">{customerNameById[offer.customerId]}</span>
+                  )
+                ) : (
+                  <span className="text-muted-foreground text-xs font-mono flex items-center gap-1">
+                    <Spinner className="h-3 w-3" />
+                    Loading...
+                  </span>
+                )}
+              </TableCell>
               <TableCell>
                 <Badge variant={getStatusColor(offer.status)}>
                   {offer.status}
@@ -176,15 +220,98 @@ export default function OfferDataTable({
               </TableCell>
               <TableCell>{offer.version}</TableCell>
               <TableCell className="text-right">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => openPreview(offer.id)}
-                  className="gap-2"
-                >
-                  <Eye className="h-4 w-4" />
-                  Preview
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      Actions
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => openPreview(offer.id)}>
+                      <Eye className="h-4 w-4 mr-2" />
+                      Preview
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        try {
+                          let token = offer.token;
+                          if (!token) {
+                            const response = await offersApi.generateToken(offer.id);
+                            token = response.data.token;
+                          }
+                          window.open(`/q/${token}`, "_blank");
+                        } catch (error) {
+                          toast.error("Failed to open quotation");
+                        }
+                      }}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      View Full Page
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        try {
+                          let token = offer.token;
+                          if (!token) {
+                            const response = await offersApi.generateToken(offer.id);
+                            token = response.data.token;
+                          }
+                          const link = `${window.location.origin}/q/${token}`;
+                          await navigator.clipboard.writeText(link);
+                          toast.success("Link copied to clipboard!");
+                        } catch (error) {
+                          toast.error("Failed to copy link");
+                        }
+                      }}
+                    >
+                      <Link2 className="h-4 w-4 mr-2" />
+                      Copy Share Link
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(`/api/offers/${offer.id}/pdf`);
+                          if (!response.ok) throw new Error("Failed to generate PDF");
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement("a");
+                          a.href = url;
+                          a.download = `quotation-${offer.offerNumber}.pdf`;
+                          document.body.appendChild(a);
+                          a.click();
+                          window.URL.revokeObjectURL(url);
+                          document.body.removeChild(a);
+                          toast.success("PDF downloaded successfully");
+                        } catch (error) {
+                          toast.error("Failed to download PDF");
+                        }
+                      }}
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download PDF
+                    </DropdownMenuItem>
+                    {offer.status === "APPROVED" && !offer.convertedToInvoiceId && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={async () => {
+                            try {
+                              await offersApi.convertToInvoice(offer.id);
+                              toast.success("Quotation converted to invoice!");
+                              onRefresh();
+                            } catch (error) {
+                              toast.error("Failed to convert to invoice");
+                            }
+                          }}
+                        >
+                          <FileText className="h-4 w-4 mr-2" />
+                          Convert to Invoice
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </TableCell>
             </TableRow>
           ))}

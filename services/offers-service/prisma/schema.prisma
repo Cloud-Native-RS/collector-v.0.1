@@ -45,6 +45,7 @@ model Offer {
   id                String      @id @default(uuid())
   offerNumber       String      @unique
   customerId        String
+  customerName      String?
   status            OfferStatus @default(DRAFT)
   issueDate         DateTime    @default(now())
   validUntil        DateTime
@@ -59,6 +60,31 @@ model Offer {
   // Approval workflow
   approvalToken     String?     @unique
   notes             String?     @db.Text
+  
+  // Rich text content (JSON EditorDoc format)
+  customerDetails   Json?
+  fromDetails       Json?
+  paymentDetails    Json?
+  noteDetails       Json?
+  topBlock          Json?
+  bottomBlock       Json?
+  
+  // Template and display configuration
+  template          Json?
+  logoUrl           String?
+  dateFormat        String      @default("dd.MM.yyyy")
+  locale            String      @default("en-US")
+  timezone          String      @default("UTC")
+  includeDecimals   Boolean     @default(true)
+  includeUnits      Boolean     @default(false)
+  
+  // Public sharing
+  token             String?     @unique
+  viewedAt          DateTime?
+  sentTo            String?
+  
+  // Invoice conversion
+  convertedToInvoiceId String?
   
   // Versioning support
   parentOfferId     String?     // Reference to original offer if this is a revision
@@ -81,6 +107,7 @@ model Offer {
   @@index([validUntil])
   @@index([approvalToken])
   @@index([parentOfferId])
+  @@index([token])
   @@map("offers")
 }
 
@@ -89,9 +116,11 @@ model OfferLineItem {
   id                String   @id @default(uuid())
   offerId           String
   productId         String?  // Nullable for custom lines
+  name              String   // Display name (alias for description)
   description       String
   quantity          Decimal  @db.Decimal(10, 2)
   unitPrice         Decimal  @db.Decimal(19, 4)
+  unit              String?  // Unit of measure (e.g., "kom", "m2", "sat")
   discountPercent   Decimal  @default(0) @db.Decimal(5, 2) // 0-100
   taxPercent        Decimal  @default(0) @db.Decimal(5, 2) // 0-100
   totalPrice        Decimal  @db.Decimal(19, 4) // Computed: (quantity * unitPrice * (1 - discountPercent/100)) * (1 + taxPercent/100)

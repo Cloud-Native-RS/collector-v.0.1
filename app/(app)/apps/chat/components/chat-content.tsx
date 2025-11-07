@@ -31,7 +31,6 @@ export function ChatContent() {
           className="block max-w-sm dark:hidden"
           src={`/not-selected-chat.svg`}
           alt="shadcn/ui"
-          unoptimized
         />
         <Image
           width={200}

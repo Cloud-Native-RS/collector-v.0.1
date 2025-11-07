@@ -28,7 +28,6 @@ export function DigitalWallets() {
               height={20}
               className="size-6 object-contain"
               src={"/images/crypto-icons/bitcoin.svg"}
-              unoptimized
               alt="shadcn/ui"
             />
             <span>Bitcoin Wallet</span>
@@ -44,7 +43,6 @@ export function DigitalWallets() {
               height={20}
               className="size-6 object-contain"
               src={"/images/crypto-icons/ethereum.svg"}
-              unoptimized
               alt="shadcn/ui"
             />
             <span>Ethereum Wallet</span>
@@ -60,7 +58,6 @@ export function DigitalWallets() {
               height={20}
               className="size-6 object-contain"
               src={"/images/crypto-icons/avalanche.svg"}
-              unoptimized
               alt="..."
             />
             <span>Avalanche Wallet</span>

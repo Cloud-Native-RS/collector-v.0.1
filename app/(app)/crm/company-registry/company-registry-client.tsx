@@ -8,6 +8,8 @@ import CompanyDataTable from "./company-data-table";
 import AddCompanyDialog from "./add-company-dialog";
 import { CompanyDetailsPanel } from "./CompanyDetailsPanel";
 import { type Company } from "./types";
+import { ExportButton } from "@/components/ui/export-button";
+import { type ExportColumn } from "@/lib/export";
 
 interface CompanyRegistryClientProps {
   initialCompanies: Company[];
@@ -109,6 +111,48 @@ export default function CompanyRegistryClient({
     return filtered;
   }, [companies, selectedStatus]);
 
+  // Export columns definition
+  const exportColumns: ExportColumn<Company>[] = useMemo(() => [
+    { key: "companyNumber", label: "Company #" },
+    { key: "legalName", label: "Legal Name" },
+    { key: "tradingName", label: "Trading Name" },
+    { key: "companyType", label: "Type" },
+    { key: "taxId", label: "Tax ID" },
+    { key: "registrationNumber", label: "Registration #" },
+    { key: "status", label: "Status" },
+    { key: "industry", label: "Industry" },
+    {
+      key: "contactInfo",
+      label: "Email",
+      format: (val: any) => val?.email || "N/A"
+    },
+    {
+      key: "contactInfo",
+      label: "Phone",
+      format: (val: any) => val?.phone || "N/A"
+    },
+    {
+      key: "contactInfo",
+      label: "Website",
+      format: (val: any) => val?.website || "N/A"
+    },
+    {
+      key: "address",
+      label: "Address",
+      format: (val: any) => val ? `${val.street}, ${val.city}, ${val.state || ""} ${val.zipCode}, ${val.country}`.trim() : "N/A"
+    },
+    {
+      key: "legalRepresentative",
+      label: "Legal Rep",
+      format: (val: any) => val?.name || "N/A"
+    },
+    {
+      key: "createdAt",
+      label: "Created",
+      format: (val) => new Date(val as string).toLocaleDateString()
+    },
+  ], []);
+
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Compact Header - Max 56px */}
@@ -165,6 +209,15 @@ export default function CompanyRegistryClient({
             </div>
           </div>
           <div className="col-span-6 flex items-center justify-end gap-2">
+            <ExportButton
+              data={filteredCompanies}
+              columns={exportColumns}
+              filename="companies"
+              entityName="Companies"
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+            />
             <Button onClick={handleAddCompanyClick} size="sm" className="h-7 px-3 text-xs">
               <Plus className="mr-1.5 h-3 w-3" /> Add
             </Button>

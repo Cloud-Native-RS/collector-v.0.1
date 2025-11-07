@@ -124,7 +124,6 @@ export const columns: ColumnDef<Product>[] = [
           className="size-8"
           src={row.original.image}
           alt="..."
-          unoptimized
         />
         <div className="capitalize">{row.getValue("name")}</div>
       </div>

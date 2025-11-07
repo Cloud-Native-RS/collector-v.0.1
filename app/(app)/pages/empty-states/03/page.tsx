@@ -21,7 +21,6 @@ export default function Page() {
             width={300}
             height={200}
             className="mx-auto"
-            unoptimized
             alt="..."
           />
         </figure>

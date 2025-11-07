@@ -3,7 +3,7 @@
 
 const API_BASE_URL = '';
 
-async function fetchWithAuth(url: string, options: RequestInit = {}) {
+async function fetchWithAuth(url: string, options: RequestInit = {}, silent404 = false) {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const tenantId = typeof window !== 'undefined' ? localStorage.getItem('tenantId') || 'default-tenant' : 'default-tenant';
 
@@ -30,6 +30,11 @@ async function fetchWithAuth(url: string, options: RequestInit = {}) {
   const text = await response.text();
 
   if (!response.ok) {
+    // If 404 and silent mode enabled, throw without logging
+    if (response.status === 404 && silent404) {
+      throw new Error('Not found');
+    }
+    
     let errorMessage = 'An error occurred';
     try {
       if (text && isJson) {
@@ -274,8 +279,8 @@ export const customersApi = {
     return fetchWithAuth(`/api/customers${queryString ? `?${queryString}` : ''}`);
   },
 
-  async getById(id: string): Promise<{ success: boolean; data: Customer }> {
-    return fetchWithAuth(`/api/customers/${id}`);
+  async getById(id: string, silent404 = false): Promise<{ success: boolean; data: Customer }> {
+    return fetchWithAuth(`/api/customers/${id}`, {}, silent404);
   },
 
   async create(input: CreateCustomerInput): Promise<{ success: boolean; data: Customer }> {

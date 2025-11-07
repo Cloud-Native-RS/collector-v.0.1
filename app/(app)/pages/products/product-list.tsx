@@ -116,7 +116,6 @@ export const columns: ColumnDef<Product>[] = [
             src={`/images${row.original.image}`}
             width={48}
             height={48}
-            unoptimized
             alt="..."
           />
         </figure>

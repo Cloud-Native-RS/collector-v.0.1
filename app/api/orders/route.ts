@@ -47,7 +47,6 @@ async function proxyRequest(
       options.body = JSON.stringify(body);
     }
 
-    console.log('Proxying request to:', url.toString());
     const response = await fetch(url.toString(), options);
     
     let data: any = {};
@@ -60,7 +59,6 @@ async function proxyRequest(
       // If response is not JSON, that's okay
     }
 
-    console.log('Orders service response:', { status: response.status, statusText: response.statusText, hasData: !!data });
 
     if (!response.ok) {
       console.error('Orders service error:', { status: response.status, data });
@@ -107,11 +105,7 @@ async function proxyRequest(
 }
 
 export async function GET(request: NextRequest) {
-  console.log('✅ /api/orders GET handler called');
   const ordersServiceUrl = process.env.NEXT_PUBLIC_ORDERS_SERVICE_URL || 'http://localhost:3002';
-  console.log('ORDERS_SERVICE_URL:', ordersServiceUrl);
-  console.log('Request URL:', request.url);
-  console.log('Query params:', Object.fromEntries(request.nextUrl.searchParams));
   
   try {
     return await proxyRequest(request, '/api/orders');

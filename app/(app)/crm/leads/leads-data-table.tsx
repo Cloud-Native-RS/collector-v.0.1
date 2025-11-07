@@ -158,7 +158,7 @@ export default function LeadsDataTable({
     },
     {
       accessorKey: "contact",
-      header: "Contact",
+      header: () => <div className="text-left">Contact</div>,
       cell: ({ row }) => {
         return (
           <div className="space-y-1 min-w-[180px]">
@@ -179,7 +179,7 @@ export default function LeadsDataTable({
     },
     {
       accessorKey: "source",
-      header: "Source",
+      header: () => <div className="text-left">Source</div>,
       cell: ({ row }) => {
         const source = row.original.source;
         
@@ -259,7 +259,7 @@ export default function LeadsDataTable({
     },
     {
       accessorKey: "assignedTo",
-      header: "Assigned",
+      header: () => <div className="text-left">Assigned</div>,
       cell: ({ row }) => {
         const assignedTo = row.original.assignedTo;
         if (!assignedTo) return <div className="text-sm text-muted-foreground">-</div>;
@@ -492,12 +492,16 @@ export default function LeadsDataTable({
             <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                  <TableRow key={headerGroup.id} className="hover:bg-transparent border-b">
                     {headerGroup.headers.map((header) => {
                       return (
                         <TableHead 
                           key={header.id}
-                          className="h-10"
+                          className={cn(
+                            "h-10 text-xs font-medium",
+                            header.column.id === "select" && "w-10",
+                            header.column.id === "actions" && "w-10"
+                          )}
                           style={{ width: header.getSize() !== 150 ? header.getSize() : undefined }}
                         >
                           {header.isPlaceholder
@@ -526,13 +530,14 @@ export default function LeadsDataTable({
                     </TableRow>
                   ))
                 ) : table.getRowModel().rows?.length ? (
-                  table.getRowModel().rows.map((row) => (
+                  table.getRowModel().rows.map((row, index) => (
                     <TableRow 
                       key={row.id} 
                       data-state={row.getIsSelected() && "selected"}
                       className={cn(
-                        "cursor-pointer hover:bg-muted/50 transition-colors",
-                        row.getIsSelected() && "bg-muted/30"
+                        "cursor-pointer hover:bg-muted/40 transition-colors border-b",
+                        row.getIsSelected() && "bg-primary/5",
+                        index % 2 === 0 ? "bg-background" : "bg-muted/20"
                       )}
                       onClick={() => {
                         setSelectedLead(row.original);
@@ -542,7 +547,11 @@ export default function LeadsDataTable({
                       {row.getVisibleCells().map((cell) => (
                         <TableCell 
                           key={cell.id}
-                          className="py-3"
+                          className={cn(
+                            "py-1 text-sm",
+                            cell.column.id === "select" && "w-10",
+                            cell.column.id === "actions" && "w-10"
+                          )}
                           onClick={(e) => {
                             // Prevent row click when clicking on actions or checkbox
                             if (cell.column.id === "actions" || cell.column.id === "select") {
@@ -557,13 +566,13 @@ export default function LeadsDataTable({
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={columns.length} className="h-24 text-center">
+                    <TableCell colSpan={columns.length} className="h-16 text-center py-4">
                       <div className="flex flex-col items-center justify-center gap-2">
                         {loading ? (
-                          <p className="text-sm text-muted-foreground">Loading leads...</p>
+                          <p className="text-xs text-muted-foreground">Loading leads...</p>
                         ) : searchQuery ? (
                           <>
-                            <p className="text-sm text-muted-foreground">No leads found matching your search.</p>
+                            <p className="text-xs text-muted-foreground">No leads found matching your search.</p>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -574,7 +583,7 @@ export default function LeadsDataTable({
                             </Button>
                           </>
                         ) : (
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             No leads found. Click "Add Lead" to create your first lead.
                           </p>
                         )}
@@ -587,58 +596,61 @@ export default function LeadsDataTable({
           </div>
         </div>
 
-        {/* Pagination */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>
-              Showing {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} to{" "}
-              {Math.min(
-                (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
-                table.getFilteredRowModel().rows.length
-              )}{" "}
-              of {table.getFilteredRowModel().rows.length} results
-            </span>
+        {/* Compact Pagination */}
+        <div className="flex items-center justify-between px-3 py-1.5">
+          <div className="flex items-center gap-1.5">
+            <p className="text-muted-foreground text-xs">Show</p>
+            <Select
+              value={`${table.getState().pagination.pageSize}`}
+              onValueChange={(value) => {
+                table.setPageSize(Number(value));
+              }}
+            >
+              <SelectTrigger className="w-[70px] h-6 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="25">25</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+                <SelectItem value="100">100</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-muted-foreground text-xs">entries</p>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2">
-              <p className="text-sm text-muted-foreground">Show</p>
-              <Select
-                value={`${table.getState().pagination.pageSize}`}
-                onValueChange={(value) => {
-                  table.setPageSize(Number(value));
-                }}
-              >
-                <SelectTrigger className="w-[70px] h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="25">25</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
-                  <SelectItem value="100">100</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="flex items-center gap-1.5">
+            <div className="text-muted-foreground text-xs">
+              {table.getFilteredRowModel().rows.length === 0 ? (
+                <>0-0 of 0</>
+              ) : (
+                <>
+                  {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1}-{" "}
+                  {Math.min(
+                    (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
+                    table.getFilteredRowModel().rows.length
+                  )}{" "}
+                  of {table.getFilteredRowModel().rows.length}
+                </>
+              )}
             </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
-                className="h-8"
-              >
-                Previous
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
-                className="h-8"
-              >
-                Next
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+              className="h-6 px-2 text-xs"
+            >
+              Prev
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+              className="h-6 px-2 text-xs"
+            >
+              Next
+            </Button>
           </div>
         </div>
       </div>

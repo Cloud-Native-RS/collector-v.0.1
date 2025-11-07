@@ -1,11 +1,20 @@
 "use client";
 
 import React from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { ImageIcon, Tag, PenSquare, Check, Trash2Icon, ArchiveIcon } from "lucide-react";
-import { MinimalTiptapEditor } from "@/components/ui/custom/minimal-tiptap";
 import { Content } from "@tiptap/react";
+
+// Lazy load heavy TipTap editor
+const MinimalTiptapEditor = dynamic(
+  () => import("@/components/ui/custom/minimal-tiptap").then((mod) => ({ default: mod.MinimalTiptapEditor })),
+  {
+    loading: () => <div className="h-32 bg-muted rounded-md animate-pulse" />,
+    ssr: false
+  }
+);
 
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -58,7 +67,6 @@ export function AddNoteModal() {
               height={200}
               alt="shadcn/ui"
               className="aspect-video w-full rounded-tl-md rounded-tr-md object-cover"
-              unoptimized
             />
           </figure>
         )}

@@ -26,7 +26,6 @@ export function WelcomeCard() {
               height={50}
               src={`/academy-dashboard-light.svg`}
               className="block w-full dark:hidden"
-              unoptimized
               alt="shadcn/ui"
             />
             <Image
@@ -34,7 +33,6 @@ export function WelcomeCard() {
               height={50}
               src={`/academy-dashboard-dark.svg`}
               className="hidden w-full dark:block"
-              unoptimized
               alt="shadcn/ui"
             />
           </figure>
@@ -43,7 +41,6 @@ export function WelcomeCard() {
             height={300}
             src={`/star-shape.png`}
             className="pointer-events-none absolute inset-0 aspect-auto"
-            unoptimized
             alt="shadcn/ui"
           />
         </div>

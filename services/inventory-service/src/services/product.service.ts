@@ -75,9 +75,11 @@ export class ProductService {
   async getAll(tenantId: string, skip = 0, take = 50, filters?: {
     category?: ProductCategory;
     search?: string;
-  }): Promise<any[]> {
+  }): Promise<Product[]> {
     if (!this.prisma) {
-      console.error('ProductService.getAll: prisma client is not initialized');
+      if (process.env.NODE_ENV === "development") {
+        console.error('ProductService.getAll: prisma client is not initialized');
+      }
       throw new AppError('Database connection not available', 500);
     }
 
@@ -85,7 +87,7 @@ export class ProductService {
       throw new AppError('Tenant ID is required', 400);
     }
 
-    const where: any = { tenantId };
+    const where: Prisma.ProductWhereInput = { tenantId };
 
     if (filters?.category) {
       where.category = filters.category;
@@ -101,7 +103,9 @@ export class ProductService {
 
     try {
       if (!this.prisma.product) {
-        console.error('ProductService.getAll: prisma.product is undefined');
+        if (process.env.NODE_ENV === "development") {
+          console.error('ProductService.getAll: prisma.product is undefined');
+        }
         throw new AppError('Product model not available', 500);
       }
 
@@ -120,21 +124,18 @@ export class ProductService {
           createdAt: 'desc',
         },
       });
-      
+
       return products;
-    } catch (error: any) {
-      console.error('ProductService.getAll error:', error);
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack,
-        prismaAvailable: !!this.prisma,
-        productModelAvailable: !!(this.prisma?.product),
-      });
-      throw new AppError(`Failed to fetch products: ${error.message}`, 500);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      if (process.env.NODE_ENV === "development") {
+        console.error('ProductService.getAll error:', error);
+      }
+      throw new AppError(`Failed to fetch products: ${errorMessage}`, 500);
     }
   }
 
-  async update(id: string, tenantId: string, data: Partial<any>): Promise<Product> {
+  async update(id: string, tenantId: string, data: Prisma.ProductUpdateInput): Promise<Product> {
     const existing = await this.getById(id, tenantId);
     if (!existing) {
       throw new AppError('Product not found', 404);

@@ -1,5 +1,5 @@
 import { generateMeta } from "@/lib/utils";
-import { FileManager } from "./components/file-manager";
+import FileManagerClient from "./file-manager-client";
 
 export async function generateMetadata() {
   return generateMeta({
@@ -11,5 +11,5 @@ export async function generateMetadata() {
 }
 
 export default function Page() {
-  return <FileManager />;
+  return <FileManagerClient />;
 }

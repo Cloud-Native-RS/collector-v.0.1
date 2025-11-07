@@ -1,9 +1,10 @@
 "use client";
 
 import type { DragEndEvent } from "@dnd-kit/core";
-import { SearchIcon } from "lucide-react";
+import { SearchIcon, Sparkles } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
+import confetti from "canvas-confetti";
 
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -53,10 +54,45 @@ export default function DealsKanbanBoard({
 }: DealsKanbanBoardProps) {
 	const [searchQuery, setSearchQuery] = React.useState("");
 	const [isUpdating, setIsUpdating] = React.useState<string | null>(null);
+	const [celebratingDeal, setCelebratingDeal] = React.useState<string | null>(null);
 
+	// Track deals changes in development
 	React.useEffect(() => {
-		console.log("DealsKanbanBoard rendered with deals:", deals.length);
+		if (process.env.NODE_ENV === "development") {
+			console.log("DealsKanbanBoard rendered with deals:", deals.length);
+		}
 	}, [deals]);
+
+	// Confetti celebration for closed won deals
+	const celebrateWin = React.useCallback(() => {
+		const duration = 3000;
+		const animationEnd = Date.now() + duration;
+		const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+		const randomInRange = (min: number, max: number) => {
+			return Math.random() * (max - min) + min;
+		};
+
+		const interval: any = setInterval(() => {
+			const timeLeft = animationEnd - Date.now();
+
+			if (timeLeft <= 0) {
+				return clearInterval(interval);
+			}
+
+			const particleCount = 50 * (timeLeft / duration);
+			confetti({
+				...defaults,
+				particleCount,
+				origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
+			});
+			confetti({
+				...defaults,
+				particleCount,
+				origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
+			});
+		}, 250);
+	}, []);
 
 	// Organize deals by stage
 	const columnsData = React.useMemo(() => {
@@ -90,11 +126,8 @@ export default function DealsKanbanBoard({
 
 	const handleDragEnd = async (event: DragEndEvent) => {
 		const { active, over } = event;
-		
-		console.log("Drag end:", { activeId: active.id, overId: over?.id });
 
 		if (!over || active.id === over.id) {
-			console.log("Drag cancelled: no over target or same position");
 			return;
 		}
 
@@ -126,7 +159,18 @@ export default function DealsKanbanBoard({
 				}
 
 				await crmApi.updateDealStage(dealId, apiStage);
-				toast.success("Deal stage updated successfully");
+				
+				// Celebrate if moved to closed_won
+				if (overId === "closed_won") {
+					setCelebratingDeal(dealId);
+					celebrateWin();
+					toast.success("🎉 Deal Won! Congratulations!", {
+						duration: 4000,
+					});
+					setTimeout(() => setCelebratingDeal(null), 3000);
+				} else {
+					toast.success("Deal stage updated successfully");
+				}
 
 				if (onRefresh) {
 					onRefresh();
@@ -157,7 +201,18 @@ export default function DealsKanbanBoard({
 				}
 
 				await crmApi.updateDealStage(dealId, apiStage);
-				toast.success("Deal stage updated successfully");
+				
+				// Celebrate if moved to closed_won
+				if (targetDeal.stage === "closed_won") {
+					setCelebratingDeal(dealId);
+					celebrateWin();
+					toast.success("🎉 Deal Won! Congratulations!", {
+						duration: 4000,
+					});
+					setTimeout(() => setCelebratingDeal(null), 3000);
+				} else {
+					toast.success("Deal stage updated successfully");
+				}
 
 				if (onRefresh) {
 					onRefresh();
@@ -210,7 +265,11 @@ export default function DealsKanbanBoard({
 						<Kanban.Column
 							key={stage}
 							value={stage}
-							className="w-[320px] min-w-[320px]"
+							className={cn(
+								"w-[320px] min-w-[320px] transition-all duration-200",
+								stage === "closed_won" && "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800",
+								stage === "closed_lost" && "bg-gray-50 dark:bg-gray-900/20"
+							)}
 						>
 							<div className="flex items-center justify-between mb-4">
 								<div className="flex items-center gap-2">
@@ -255,19 +314,25 @@ export default function DealsKanbanBoard({
 											disabled={isUpdating === deal.id}
 											asHandle
 											className={cn(
-												"rounded-lg border bg-card p-4 shadow-sm transition-shadow hover:shadow-md cursor-grab active:cursor-grabbing",
-												isUpdating === deal.id && "opacity-50",
+												"group rounded-lg border bg-card p-4 shadow-sm transition-all duration-300 cursor-grab active:cursor-grabbing",
+												"hover:shadow-xl hover:scale-[1.02] hover:-translate-y-1",
+												"hover:border-primary/50",
+												isUpdating === deal.id && "opacity-50 animate-pulse",
+												celebratingDeal === deal.id && "animate-bounce border-emerald-500 shadow-emerald-500/50 shadow-2xl",
 											)}
 										>
 											<div className="flex items-start justify-between mb-2">
 												<div className="flex-1">
-													<h4 className="font-medium text-sm mb-1 line-clamp-2">
+													<h4 className="font-medium text-sm mb-1 line-clamp-2 group-hover:text-primary transition-colors">
 														{deal.title}
 													</h4>
 													<p className="text-xs text-muted-foreground mb-2">
 														{deal.dealNumber}
 													</p>
 												</div>
+												{celebratingDeal === deal.id && (
+													<Sparkles className="h-5 w-5 text-emerald-500 animate-pulse" />
+												)}
 											</div>
 
 											{deal.description && (
@@ -339,7 +404,29 @@ export default function DealsKanbanBoard({
 					))}
 				</Kanban.Board>
 				<Kanban.Overlay>
-					<div className="bg-primary/10 size-full rounded-md" />
+					{({ value }) => {
+						const deal = deals.find((d) => d.id === value);
+						if (!deal) return <div className="bg-primary/10 size-full rounded-md" />;
+						
+						return (
+							<div className="w-[320px] p-4 rounded-lg border-2 border-primary bg-card shadow-2xl rotate-3 scale-105">
+								<h4 className="font-medium text-sm mb-1 line-clamp-2">
+									{deal.title}
+								</h4>
+								<p className="text-xs text-muted-foreground mb-2">
+									{deal.dealNumber}
+								</p>
+								<div className="flex items-center justify-between">
+									<span className="text-xs font-medium text-muted-foreground">
+										Value
+									</span>
+									<span className="text-sm font-semibold">
+										${deal.value.toLocaleString()}
+									</span>
+								</div>
+							</div>
+						);
+					}}
 				</Kanban.Overlay>
 			</Kanban.Root>
 		</div>

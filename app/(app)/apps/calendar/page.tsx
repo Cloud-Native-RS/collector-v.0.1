@@ -1,7 +1,6 @@
 import { generateMeta } from "@/lib/utils";
 import { Metadata } from "next";
-
-import EventCalendarApp from "./components/event-calendar-app";
+import CalendarClient from "./calendar-client";
 
 export async function generateMetadata(): Promise<Metadata> {
   return generateMeta({
@@ -13,5 +12,5 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function Page() {
-  return <EventCalendarApp />;
+  return <CalendarClient />;
 }

@@ -8,6 +8,9 @@ import ContactsDataTable from "./contacts-data-table";
 import AddContactDialog from "./add-contact-dialog";
 import { ContactDetailsPanel } from "./ContactDetailsPanel";
 import { type Contact } from "./types";
+import { ExportButton } from "@/components/ui/export-button";
+import { type ExportColumn } from "@/lib/export";
+import { AdvancedFilter, type FilterField } from "@/components/ui/advanced-filter";
 
 interface ContactsPageClientProps {
   initialContacts: Contact[];
@@ -24,6 +27,7 @@ export default function ContactsPageClient({
   const [isNewContactPanelOpen, setIsNewContactPanelOpen] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
   const [selectedCompany, setSelectedCompany] = useState<string>("all");
+  const [advancedFilteredContacts, setAdvancedFilteredContacts] = useState<Contact[]>(initialContacts);
 
   const handleRefresh = async () => {
     // Refresh data by reloading the page
@@ -63,10 +67,6 @@ export default function ContactsPageClient({
     
     // TODO: Call API to persist changes
     // Example: await updateContact(updatedContact.originalId, updatedContact);
-    console.log("Contact saved:", updatedContact);
-    console.log("Notes:", notes);
-    console.log("LinkedIn:", linkedIn);
-    console.log("Tags:", tags);
   };
 
   const handleCreateContact = (newContact: Contact, notes: string[], linkedIn?: string, tags?: string[]) => {
@@ -76,10 +76,6 @@ export default function ContactsPageClient({
     // TODO: Call API to create contact
     // Example: const created = await createContact(newContact);
     // setContacts(prevContacts => [...prevContacts, created]);
-    console.log("Contact created:", newContact);
-    console.log("Notes:", notes);
-    console.log("LinkedIn:", linkedIn);
-    console.log("Tags:", tags);
     
     // Refresh page to get updated data from server
     handleRefresh();
@@ -123,9 +119,9 @@ export default function ContactsPageClient({
     return Array.from(companySet).sort();
   }, [contacts]);
 
-  // Filter contacts based on selected filters
+  // Filter contacts based on selected filters (quick filters + advanced filters)
   const filteredContacts = useMemo(() => {
-    let filtered = contacts;
+    let filtered = advancedFilteredContacts;
 
     if (selectedStatus !== "all") {
       filtered = filtered.filter(contact => contact.status === selectedStatus);
@@ -143,7 +139,108 @@ export default function ContactsPageClient({
     }
 
     return filtered;
-  }, [contacts, selectedStatus, selectedCompany]);
+  }, [advancedFilteredContacts, selectedStatus, selectedCompany]);
+
+  // Advanced filter fields definition
+  const filterFields: FilterField[] = useMemo(() => [
+    {
+      key: "firstName",
+      label: "First Name",
+      type: "text",
+      placeholder: "Enter first name"
+    },
+    {
+      key: "lastName",
+      label: "Last Name",
+      type: "text",
+      placeholder: "Enter last name"
+    },
+    {
+      key: "email",
+      label: "Email Address",
+      type: "text",
+      placeholder: "Enter email"
+    },
+    {
+      key: "phone",
+      label: "Phone",
+      type: "text",
+      placeholder: "Enter phone"
+    },
+    {
+      key: "status",
+      label: "Status",
+      type: "select",
+      options: [
+        { value: "active", label: "Active" },
+        { value: "inactive", label: "Inactive" },
+        { value: "pending", label: "Pending" },
+        { value: "archived", label: "Archived" },
+      ]
+    },
+    {
+      key: "companyName",
+      label: "Company",
+      type: "text",
+      placeholder: "Enter company name"
+    },
+    {
+      key: "title",
+      label: "Job Title",
+      type: "text",
+      placeholder: "Enter job title"
+    },
+    {
+      key: "department",
+      label: "Department",
+      type: "text",
+      placeholder: "Enter department"
+    },
+    {
+      key: "address.city",
+      label: "City",
+      type: "text",
+      placeholder: "Enter city"
+    },
+    {
+      key: "address.country",
+      label: "Country",
+      type: "text",
+      placeholder: "Enter country"
+    },
+    {
+      key: "createdAt",
+      label: "Created Date",
+      type: "date"
+    },
+  ], []);
+
+  // Export columns definition
+  const exportColumns: ExportColumn<Contact>[] = useMemo(() => [
+    { key: "contactNumber", label: "Contact #" },
+    { key: "firstName", label: "First Name" },
+    { key: "lastName", label: "Last Name" },
+    { key: "email", label: "Email" },
+    { key: "phone", label: "Phone" },
+    { key: "title", label: "Title" },
+    { key: "department", label: "Department" },
+    {
+      key: "companyName",
+      label: "Company",
+      format: (val, row) => row.companyLegalName || row.companyName || "N/A"
+    },
+    { key: "status", label: "Status" },
+    {
+      key: "address",
+      label: "Address",
+      format: (val: any) => val ? `${val.street}, ${val.city}, ${val.state || ""} ${val.zipCode}, ${val.country}`.trim() : "N/A"
+    },
+    {
+      key: "createdAt",
+      label: "Created",
+      format: (val) => new Date(val as string).toLocaleDateString()
+    },
+  ], []);
 
   return (
     <div className="flex flex-col h-full bg-background">
@@ -221,6 +318,20 @@ export default function ContactsPageClient({
                 </Button>
               </>
             )}
+            <AdvancedFilter
+              fields={filterFields}
+              data={contacts}
+              onFilterChange={setAdvancedFilteredContacts}
+            />
+            <ExportButton
+              data={filteredContacts}
+              columns={exportColumns}
+              filename="contacts"
+              entityName="Contacts"
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+            />
             <Button onClick={handleAddContactClick} size="sm" className="h-7 px-3 text-xs">
               <Plus className="mr-1.5 h-3 w-3" /> Add
             </Button>

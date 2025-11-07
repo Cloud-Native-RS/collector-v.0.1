@@ -103,7 +103,6 @@ export function TradingCard() {
                                     height={20}
                                     className="size-6"
                                     src={`/images/crypto-icons/${coins.find((coin) => coin.name === selectedCoin)?.icon}.svg`}
-                                    unoptimized
                                     alt="..."
                                   />
                                   {coins.find((coin) => coin.name === selectedCoin)?.name}/
@@ -120,7 +119,6 @@ export function TradingCard() {
                                       height={20}
                                       className="size-6"
                                       src={`/images/crypto-icons/${coin.icon}.svg`}
-                                      unoptimized
                                       alt="..."
                                     />
                                     {coin.name}/{coin.short_name}
@@ -187,7 +185,6 @@ export function TradingCard() {
                                     height={20}
                                     className="size-6"
                                     src={`/images/crypto-icons/${coins.find((coin) => coin.name === selectedCoin)?.icon}.svg`}
-                                    unoptimized
                                     alt="..."
                                   />
                                   {coins.find((coin) => coin.name === selectedCoin)?.name}/
@@ -204,7 +201,6 @@ export function TradingCard() {
                                       height={20}
                                       className="size-6"
                                       src={`/images/crypto-icons/${coin.icon}.svg`}
-                                      unoptimized
                                       alt="..."
                                     />
                                     {coin.name}/{coin.short_name}

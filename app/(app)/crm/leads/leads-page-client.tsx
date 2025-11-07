@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import LeadsDataTable from "./leads-data-table";
 import AddLeadDialog from "./add-lead-dialog";
@@ -29,7 +28,6 @@ export default function LeadsPageClient({
   const [leads, setLeads] = useState<Lead[]>(initialLeads);
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
 
   const refreshLeads = async () => {
@@ -114,17 +112,9 @@ export default function LeadsPageClient({
                 {stats.total} {stats.total === 1 ? 'lead' : 'leads'} total
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as "table" | "kanban")}>
-                <TabsList>
-                  <TabsTrigger value="table">Table</TabsTrigger>
-                  <TabsTrigger value="kanban">Kanban</TabsTrigger>
-                </TabsList>
-              </Tabs>
-              <Button onClick={handleAddLead} size="default" className="shadow-sm">
-                <Plus className="mr-2 h-4 w-4" /> Add Lead
-              </Button>
-            </div>
+            <Button onClick={handleAddLead} size="default" className="shadow-sm">
+              <Plus className="mr-2 h-4 w-4" /> Add Lead
+            </Button>
           </div>
 
           {/* Status Filter Pills - Pipedrive Style */}
@@ -200,18 +190,12 @@ export default function LeadsPageClient({
 
       {/* Content Section */}
       <div className="flex-1 overflow-hidden px-6 py-4">
-        {viewMode === "table" ? (
-          <LeadsDataTable 
-            data={filteredLeads} 
-            onRefresh={refreshLeads} 
-            loading={loading}
-            selectedStatus={selectedStatus}
-          />
-        ) : (
-          <div className="flex items-center justify-center h-full text-muted-foreground">
-            Kanban view coming soon...
-          </div>
-        )}
+        <LeadsDataTable 
+          data={filteredLeads} 
+          onRefresh={refreshLeads} 
+          loading={loading}
+          selectedStatus={selectedStatus}
+        />
       </div>
 
       <AddLeadDialog

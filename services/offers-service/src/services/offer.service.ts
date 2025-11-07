@@ -28,6 +28,7 @@ export interface UpdateOfferInput {
   currency?: Currency;
   notes?: string;
   status?: OfferStatus;
+  convertedToInvoiceId?: string;
 }
 
 export interface OfferWithLineItems extends Offer {
@@ -263,6 +264,10 @@ export class OfferService {
       updateData.status = input.status;
     }
 
+    if (input.convertedToInvoiceId !== undefined) {
+      updateData.convertedToInvoiceId = input.convertedToInvoiceId;
+    }
+
     // If line items changed, recalculate totals
     if (updateData.lineItems) {
       const lineItems = await prisma.offerLineItem.findMany({
@@ -431,6 +436,83 @@ export class OfferService {
     });
 
     return token;
+  }
+
+  /**
+   * Generate public viewing token for shareable link
+   */
+  static async generatePublicToken(id: string, tenantId: string): Promise<string> {
+    const offer = await prisma.offer.findFirst({
+      where: { id, tenantId },
+    });
+
+    if (!offer) {
+      throw new AppError('Offer not found', 404);
+    }
+
+    // Import token utils dynamically to avoid circular dependencies
+    const { generateOfferToken } = await import('../utils/token');
+    const token = await generateOfferToken(id, tenantId);
+
+    await prisma.offer.update({
+      where: { id },
+      data: { token },
+    });
+
+    return token;
+  }
+
+  /**
+   * Get offer by public token (no tenant check)
+   */
+  static async getOfferByToken(token: string): Promise<OfferWithLineItems | null> {
+    const { verifyOfferToken } = await import('../utils/token');
+    
+    try {
+      const payload = await verifyOfferToken(token);
+      
+      const offer = await prisma.offer.findFirst({
+        where: {
+          id: payload.offerId,
+          tenantId: payload.tenantId,
+        },
+        include: {
+          lineItems: {
+            orderBy: {
+              lineNumber: 'asc',
+            },
+          },
+          approvals: {
+            orderBy: {
+              createdAt: 'desc',
+            },
+          },
+        },
+      });
+
+      return offer as OfferWithLineItems | null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Mark offer as viewed
+   */
+  static async markAsViewed(id: string): Promise<void> {
+    await prisma.offer.update({
+      where: { id },
+      data: { viewedAt: new Date() },
+    });
+  }
+
+  /**
+   * Convert offer to invoice via invoices-service
+   */
+  static async convertToInvoice(id: string, tenantId: string): Promise<string> {
+    // Import dynamically to avoid circular dependencies
+    const { InvoiceIntegrationService } = await import('./invoice-integration.service');
+    return InvoiceIntegrationService.convertOfferToInvoice(id, tenantId);
   }
 }
 

@@ -48,5 +48,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Turborepo
+.turbo
+**/.turbo
+
 # Duplicates and templates
 shadcn-dashboard-template/

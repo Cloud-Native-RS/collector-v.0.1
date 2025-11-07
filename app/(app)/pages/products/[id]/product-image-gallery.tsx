@@ -48,7 +48,6 @@ export default function ProductImageGallery() {
               width={300}
               height={300}
               alt="shadcn/ui"
-              unoptimized
             />
           </SwiperSlide>
         ))}
@@ -71,7 +70,6 @@ export default function ProductImageGallery() {
                 width={300}
                 height={300}
                 alt="shadcn/ui"
-                unoptimized
               />
             </figure>
           </SwiperSlide>

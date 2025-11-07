@@ -96,7 +96,6 @@ export function BestSellingProducts() {
                 height={40}
                 className="rounded-md!"
                 alt="..."
-                unoptimized
               />
               <div>
                 <div className="font-medium">{product.name}</div>

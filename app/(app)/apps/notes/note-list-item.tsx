@@ -18,7 +18,6 @@ export default function NoteListItem({ note }: { note: Note }) {
             src={note.image}
             className="aspect-square h-full w-full object-cover group-data-[view-mode=list]:md:absolute md:group-data-[view-mode=list]:w-62"
             alt="shadcn/ui"
-            unoptimized
           />
         </figure>
       )}

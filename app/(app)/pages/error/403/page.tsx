@@ -22,7 +22,6 @@ export default function Page() {
             src={`/403.svg`}
             className="w-full"
             alt="..."
-            unoptimized
           />
         </figure>
         <div className="mt-6 space-y-4 lg:mt-8">

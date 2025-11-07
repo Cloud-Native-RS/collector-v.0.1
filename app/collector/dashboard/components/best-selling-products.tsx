@@ -73,7 +73,6 @@ export function BestSellingProducts() {
                     height={40}
                     className="rounded-md!"
                     alt={product.name}
-                    unoptimized
                   />
                 ) : (
                   <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted text-xs font-medium">

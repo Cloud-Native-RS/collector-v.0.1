@@ -72,7 +72,6 @@ export function UserDetailSheet({ user }: { user: UserPropsTypes }) {
                                 className="size-20 rounded-lg"
                                 src={`${item.path}`}
                                 alt="shadcn/ui"
-                                unoptimized
                               />
                             </div>
                           )}

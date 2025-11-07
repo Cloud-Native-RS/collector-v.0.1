@@ -257,7 +257,6 @@ function ImageChatBubble({ message }: { message: ChatMessageProps }) {
                     width={100}
                     height={100}
                     alt="shadcn/ui"
-                    unoptimized
                   />
                   {key + 1 === images_limit && images.length > images_limit && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/40 text-3xl font-semibold text-white">

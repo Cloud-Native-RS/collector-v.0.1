@@ -575,5 +575,119 @@ router.get(
   }
 );
 
+/**
+ * @swagger
+ * /api/offers/{id}/generate-token:
+ *   post:
+ *     summary: Generate public sharing token for offer
+ *     tags: [Offers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Token generated successfully
+ */
+router.post(
+  '/:id/generate-token',
+  [param('id').isUUID()],
+  validateRequest,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const tenantId = req.tenantId!;
+      const token = await OfferService.generatePublicToken(req.params.id, tenantId);
+
+      res.json({
+        success: true,
+        data: { token },
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/offers/{id}/mark-viewed:
+ *   post:
+ *     summary: Mark offer as viewed
+ *     tags: [Offers]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Offer marked as viewed
+ */
+router.post(
+  '/:id/mark-viewed',
+  [param('id').isUUID()],
+  validateRequest,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      await OfferService.markAsViewed(req.params.id);
+
+      res.json({
+        success: true,
+        message: 'Offer marked as viewed',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * @swagger
+ * /api/offers/{id}/convert-to-invoice:
+ *   post:
+ *     summary: Convert approved offer to invoice
+ *     tags: [Offers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *     responses:
+ *       200:
+ *         description: Offer converted to invoice successfully
+ *       400:
+ *         description: Cannot convert offer (not approved or already converted)
+ */
+router.post(
+  '/:id/convert-to-invoice',
+  [param('id').isUUID()],
+  validateRequest,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const tenantId = req.tenantId!;
+      const invoiceId = await OfferService.convertToInvoice(req.params.id, tenantId);
+
+      res.json({
+        success: true,
+        data: { invoiceId },
+        message: 'Offer converted to invoice successfully',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 export default router;
 

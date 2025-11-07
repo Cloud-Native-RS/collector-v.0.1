@@ -79,7 +79,6 @@ export function RecentActivities() {
                 width={40}
                 height={40}
                 alt="shadcn/ui"
-                unoptimized
               />
               <div className="ml-4 space-y-1">
                 <p className="flex items-center gap-2 text-sm leading-none font-medium">

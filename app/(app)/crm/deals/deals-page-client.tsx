@@ -1,14 +1,26 @@
 "use client";
 
-import React, { useState, useEffect, type ErrorInfo, type ReactNode } from "react";
+import React, { useState, useEffect, useMemo, type ErrorInfo, type ReactNode } from "react";
+import dynamic from "next/dynamic";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DealsDataTable from "./deals-data-table";
-import DealsKanbanBoard from "./deals-kanban-board";
 import { type Deal } from "./types";
 import { crmApi, type Deal as ApiDeal } from "@/lib/api/crm";
 import { toast } from "sonner";
+import { ExportButton } from "@/components/ui/export-button";
+import { type ExportColumn } from "@/lib/export";
+
+// Lazy load heavy Kanban component
+const DealsKanbanBoard = dynamic(() => import("./deals-kanban-board"), {
+  loading: () => (
+    <div className="flex items-center justify-center h-64">
+      <div className="text-sm text-muted-foreground">Loading kanban board...</div>
+    </div>
+  ),
+  ssr: false
+});
 
 class KanbanErrorBoundary extends React.Component<
   { children: ReactNode },
@@ -114,6 +126,43 @@ export default function DealsPageClient({
     console.log("Add deal clicked");
   };
 
+  // Export columns definition
+  const exportColumns: ExportColumn<Deal>[] = useMemo(() => [
+    { key: "dealNumber", label: "Deal #" },
+    { key: "title", label: "Title" },
+    { key: "description", label: "Description" },
+    {
+      key: "value",
+      label: "Value",
+      format: (val) => `$${Number(val).toLocaleString()}`
+    },
+    {
+      key: "probability",
+      label: "Probability",
+      format: (val) => `${val}%`
+    },
+    { key: "stage", label: "Stage" },
+    {
+      key: "expectedCloseDate",
+      label: "Expected Close",
+      format: (val) => val ? new Date(val as string).toLocaleDateString() : "N/A"
+    },
+    {
+      key: "actualCloseDate",
+      label: "Actual Close",
+      format: (val) => val ? new Date(val as string).toLocaleDateString() : "N/A"
+    },
+    { key: "lostReason", label: "Lost Reason" },
+    { key: "customerId", label: "Customer ID" },
+    { key: "leadId", label: "Lead ID" },
+    { key: "assignedTo", label: "Assigned To" },
+    {
+      key: "createdAt",
+      label: "Created",
+      format: (val) => new Date(val as string).toLocaleDateString()
+    },
+  ], []);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between space-y-2">
@@ -123,9 +172,18 @@ export default function DealsPageClient({
             Manage your sales pipeline and track deal progress
           </p>
         </div>
-        <Button onClick={handleAddDeal}>
-          <Plus /> Add New Deal
-        </Button>
+        <div className="flex gap-2">
+          <ExportButton
+            data={deals}
+            columns={exportColumns}
+            filename="deals"
+            entityName="Deals"
+            variant="outline"
+          />
+          <Button onClick={handleAddDeal}>
+            <Plus /> Add New Deal
+          </Button>
+        </div>
       </div>
 
       <Tabs value={view} defaultValue="kanban" onValueChange={(v) => {
@@ -142,11 +200,6 @@ export default function DealsPageClient({
         </TabsContent>
         
         <TabsContent value="kanban" className="mt-4">
-          <div className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-            <p className="text-sm text-yellow-800 dark:text-yellow-200">
-              Debug: Kanban tab content is rendering. View: {view}, Deals: {deals.length}, Loading: {loading ? "Yes" : "No"}
-            </p>
-          </div>
           <KanbanErrorBoundary>
             {loading ? (
               <div className="flex items-center justify-center h-64">

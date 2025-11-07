@@ -125,7 +125,6 @@ export default function TodoList({ activeTab, onSelectTodo, onAddTodoClick }: To
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-    console.log("event.active.id", event.active.id);
     setActiveId(event.active.id as string);
   };
 
@@ -149,13 +148,6 @@ export default function TodoList({ activeTab, onSelectTodo, onAddTodoClick }: To
     reorderTodos(positions);
     setReorderedPositions(positions);
 
-    console.log("Todos after reordering:", {
-      reorderedTodos: newItems.map((todo) => ({
-        id: todo.id,
-        title: todo.title,
-        position: positions.find((p) => p.id === todo.id)?.position
-      }))
-    });
 
     toast.success("The to-do items have been reordered successfully.");
   };

@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import offerRoutes from './routes/offer.routes';
+import publicOfferRoutes from './routes/public-offer.routes';
 import lineItemRoutes from './routes/line-item.routes';
 import approvalRoutes from './routes/approval.routes';
 import { errorHandler } from './middleware/error-handler';
@@ -64,11 +65,11 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Public routes (no authentication required)
 app.use('/api/approvals', approvalRoutes);
+app.use('/api/offers', publicOfferRoutes);
 
 // Protected routes (require authentication and tenant context)
-app.use('/api/offers', authMiddleware, tenantMiddleware);
-app.use('/api/offers', offerRoutes);
-app.use('/api/offers', lineItemRoutes);
+app.use('/api/offers', authMiddleware, tenantMiddleware, offerRoutes);
+app.use('/api/offers', authMiddleware, tenantMiddleware, lineItemRoutes);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);

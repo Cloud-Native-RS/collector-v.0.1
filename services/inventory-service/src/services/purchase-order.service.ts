@@ -1,18 +1,23 @@
-import { PrismaClient, PurchaseOrder, PurchaseOrderStatus } from '@prisma/client';
+import {
+  PrismaClient,
+  PurchaseOrder,
+  PurchaseOrderStatus,
+  Supplier,
+  Product,
+  PurchaseOrderLineItem,
+  Prisma
+} from '@prisma/client';
 import { AppError } from '../middleware/error-handler';
 import { generatePONumber } from '../utils/number-generator';
 import { StockService } from './stock.service';
 
+type PurchaseOrderLineItemWithProduct = PurchaseOrderLineItem & {
+  product?: Product;
+};
+
 type PurchaseOrderWithRelations = PurchaseOrder & {
-  supplier: any;
-  lineItems: Array<{
-    id: string;
-    productId: string;
-    quantity: number;
-    receivedQuantity: number;
-    unitPrice: any; // Prisma Decimal type
-    product?: any;
-  }>;
+  supplier: Supplier;
+  lineItems: PurchaseOrderLineItemWithProduct[];
 };
 
 export class PurchaseOrderService {
@@ -93,7 +98,7 @@ export class PurchaseOrderService {
     supplierId?: string;
     status?: PurchaseOrderStatus;
   }): Promise<PurchaseOrderWithRelations[]> {
-    const where: any = { tenantId };
+    const where: Prisma.PurchaseOrderWhereInput = { tenantId };
 
     if (filters?.supplierId) {
       where.supplierId = filters.supplierId;
@@ -121,7 +126,7 @@ export class PurchaseOrderService {
     }) as Promise<PurchaseOrderWithRelations[]>;
   }
 
-  async update(id: string, tenantId: string, data: Partial<any>): Promise<PurchaseOrderWithRelations> {
+  async update(id: string, tenantId: string, data: Prisma.PurchaseOrderUpdateInput): Promise<PurchaseOrderWithRelations> {
     const existing = await this.getById(id, tenantId);
     if (!existing) {
       throw new AppError('Purchase order not found', 404);

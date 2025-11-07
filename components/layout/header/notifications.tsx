@@ -21,10 +21,19 @@ const Notifications = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button size="icon" variant="ghost" className="relative">
+        <Button
+          size="icon"
+          variant="ghost"
+          className="relative"
+          aria-label="Notifications - You have unread notifications"
+        >
           <>
             <BellIcon className="animate-tada" />
-            <span className="bg-destructive absolute end-0 top-0 block size-2 shrink-0 rounded-full"></span>
+            <span
+              className="bg-destructive absolute end-0 top-0 block size-2 shrink-0 rounded-full"
+              aria-hidden="true"
+            ></span>
+            <span className="sr-only">Unread notifications</span>
           </>
         </Button>
       </DropdownMenuTrigger>

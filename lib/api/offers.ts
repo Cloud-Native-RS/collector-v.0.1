@@ -283,5 +283,17 @@ export const offersApi = {
       method: 'DELETE',
     });
   },
+
+  async generateToken(id: string): Promise<{ success: boolean; data: { token: string } }> {
+    return fetchWithAuth(`/api/offers/${id}/generate-token`, {
+      method: 'POST',
+    });
+  },
+
+  async convertToInvoice(id: string): Promise<{ success: boolean; data: { invoiceId: string } }> {
+    return fetchWithAuth(`/api/offers/${id}/convert-to-invoice`, {
+      method: 'POST',
+    });
+  },
 };
 

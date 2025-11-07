@@ -89,10 +89,6 @@ export const LinkBubbleMenu: React.FC<LinkBubbleMenuProps> = ({ editor }) => {
     <BubbleMenu
       editor={editor}
       shouldShow={shouldShow}
-      tippyOptions={{
-        placement: 'bottom-start',
-        onHidden: () => setShowEdit(false)
-      }}
     >
       {showEdit ? (
         <LinkEditBlock

@@ -47,7 +47,6 @@ async function proxyRequest(
       options.body = JSON.stringify(body);
     }
 
-    console.log('Proxying request to:', url.toString());
     const response = await fetch(url.toString(), options);
     
     let data: any = {};
@@ -60,7 +59,6 @@ async function proxyRequest(
       // If response is not JSON, that's okay
     }
 
-    console.log('Offers service response:', { status: response.status, statusText: response.statusText, hasData: !!data });
 
     if (!response.ok) {
       console.error('Offers service error:', { status: response.status, data });
